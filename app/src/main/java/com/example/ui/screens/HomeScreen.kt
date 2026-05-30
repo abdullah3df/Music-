@@ -84,6 +84,20 @@ fun HomeScreen(
     var showAddToPlaylistDialog by remember { mutableStateOf<Track?>(null) }
     var showSortMenu by remember { mutableStateOf(false) }
 
+    val isScanning by viewModel.isScanning.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.scanResultEvent.collect { count ->
+            if (count > 0) {
+                android.widget.Toast.makeText(context, "تم العثور على $count من الملفات الصوتية الجديدة بالجهاز ومزامنتها بنجاح! 🎵", android.widget.Toast.LENGTH_LONG).show()
+            } else if (count == 0) {
+                android.widget.Toast.makeText(context, "تم فحص الملفات! المكتبة مطابقة لملفات جهازك بالفعل. ✨", android.widget.Toast.LENGTH_SHORT).show()
+            } else if (count == -1) {
+                android.widget.Toast.makeText(context, "حدث خطأ أثناء فحص ملفات جهازك الصوتية", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     // Media permissions
     var hasPermission by remember {
         mutableStateOf(
@@ -101,6 +115,25 @@ fun HomeScreen(
         hasPermission = isGranted
         if (isGranted) {
             viewModel.scanLocalFiles(context)
+        }
+    }
+
+    // Automatically trigger local file scan if permission is granted
+    LaunchedEffect(hasPermission) {
+        if (hasPermission) {
+            viewModel.scanLocalFiles(context)
+        }
+    }
+
+    // Automatically request permissions on launch to enable seamless background scanning
+    LaunchedEffect(Unit) {
+        if (!hasPermission) {
+            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                Manifest.permission.READ_MEDIA_AUDIO
+            } else {
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+            permissionLauncher.launch(permission)
         }
     }
 
@@ -181,6 +214,25 @@ fun HomeScreen(
                     },
                     actions = {
                         IconButton(
+                            onClick = { viewModel.scanLocalFiles(context) },
+                            enabled = !isScanning,
+                            modifier = Modifier.testTag("scan_button")
+                        ) {
+                            if (isScanning) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.Autorenew,
+                                    contentDescription = "Scan Audio Files",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                        IconButton(
                             onClick = { showSortMenu = true },
                             modifier = Modifier.testTag("sort_button")
                         ) {
@@ -243,13 +295,32 @@ fun HomeScreen(
             floatingActionButton = {
                 if (selectedTab == 0) {
                     FloatingActionButton(
-                        onClick = { showAddTrackDialog = true },
+                        onClick = {
+                            if (!hasPermission) {
+                                val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    Manifest.permission.READ_MEDIA_AUDIO
+                                } else {
+                                    Manifest.permission.READ_EXTERNAL_STORAGE
+                                }
+                                permissionLauncher.launch(permission)
+                            } else {
+                                viewModel.scanLocalFiles(context)
+                            }
+                        },
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.testTag("add_track_fab")
                     ) {
-                        Icon(Icons.Filled.Add, contentDescription = "Add Track")
+                        if (isScanning) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Filled.Autorenew, contentDescription = "Scan Device Audio")
+                        }
                     }
                 } else if (selectedTab == 1) {
                     var showAddRadioDialog by remember { mutableStateOf(false) }
@@ -379,6 +450,8 @@ fun HomeScreen(
                             }
                             permissionLauncher.launch(permission)
                         },
+                        isScanning = isScanning,
+                        onScanClick = { viewModel.scanLocalFiles(context) },
                         playbackState = playbackState,
                         onTrackClick = { clicked ->
                             viewModel.playbackManager.playTrackList(tracks, tracks.indexOf(clicked))
@@ -457,6 +530,8 @@ fun AllSongsTab(
     tracks: List<Track>,
     hasPermission: Boolean,
     onRequestPermission: () -> Unit,
+    isScanning: Boolean,
+    onScanClick: () -> Unit,
     playbackState: PlaybackState,
     onTrackClick: (Track) -> Unit,
     onFavoriteClick: (Track) -> Unit,
@@ -503,6 +578,55 @@ fun AllSongsTab(
                     }
                 }
             }
+        } else {
+            // Interactive dynamic scanning promotional card when permission is granted
+            Card(
+                onClick = onScanClick,
+                enabled = !isScanning,
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isScanning) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.5.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Autorenew,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            if (isScanning) "جاري البحث والمزامنة الآلية..." else "مسح ومزامنة جهازك تلقائياً",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            if (isScanning) "فضلاً انتظر لعدة ثوانٍ حتى ننتهي من فحص وتحديث مكتبتك الصوتية من الذاكرة..." else "اضغط هنا للبحث الآلي في التحميلات والمجلدات وتحديث كافة ملفاتك الصوتية.",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+            }
         }
 
         if (tracks.isEmpty()) {
@@ -514,25 +638,64 @@ fun AllSongsTab(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.AudioFile,
-                        contentDescription = null,
-                        modifier = Modifier.size(72.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        "لا توجد أصوات مضافة",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "لم يتم العثور على أي ملفات صوتية بعد. اضغط على الزر الدائري (+) في الأسفل لإضافة ملفاتك الخاصة أو إدخال روابط خارجية.",
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                    )
+                    if (isScanning) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(56.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "جاري فحص وتحديث أصوات جهازك...",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "يتم الآن البحث تلقائياً عن كافة الملفات الصوتية المخزنة والمحملة على جهازك ومزامنتها...",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.AudioFile,
+                            contentDescription = null,
+                            modifier = Modifier.size(72.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            "لا توجد أصوات مضافة",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "لم يتم العثور على أي ملفات صوتية بعد. اضغط على الزر أدناه لمسح ومزامنة جهازك بالكامل تلقائياً.",
+                            textAlign = TextAlign.Center,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        )
+                        if (!hasPermission) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = onRequestPermission,
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("السماح بالوصول والفحص التلقائي")
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Button(
+                                onClick = onScanClick,
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Filled.Autorenew, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("البدء بالفحص والمزامنة التلقائية")
+                            }
+                        }
+                    }
                 }
             }
         } else {

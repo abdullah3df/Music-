@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -31,6 +34,13 @@ class MusicViewModel(
     // Sorting State
     private val _sortType = MutableStateFlow(SortType.TITLE)
     val sortType: StateFlow<SortType> = _sortType.asStateFlow()
+
+    // Scan State
+    private val _isScanning = MutableStateFlow(false)
+    val isScanning: StateFlow<Boolean> = _isScanning.asStateFlow()
+
+    private val _scanResultEvent = MutableSharedFlow<Int>()
+    val scanResultEvent: SharedFlow<Int> = _scanResultEvent.asSharedFlow()
 
     // Database Streams
     private val _allTracksDb = repository.allTracks
@@ -253,7 +263,16 @@ class MusicViewModel(
     // Scans local files
     fun scanLocalFiles(context: Context) {
         viewModelScope.launch {
-            repository.scanDeviceAudio(context)
+            _isScanning.value = true
+            try {
+                val count = repository.scanDeviceAudio(context)
+                _scanResultEvent.emit(count)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _scanResultEvent.emit(-1)
+            } finally {
+                _isScanning.value = false
+            }
         }
     }
 

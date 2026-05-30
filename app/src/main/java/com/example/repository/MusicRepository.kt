@@ -183,59 +183,170 @@ class MusicRepository(
         }
     }
 
-    suspend fun scanDeviceAudio(context: Context) = withContext(Dispatchers.IO) {
-        val cursor = context.contentResolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-            arrayOf(
-                MediaStore.Audio.Media._ID,
-                MediaStore.Audio.Media.TITLE,
-                MediaStore.Audio.Media.ARTIST,
-                MediaStore.Audio.Media.ALBUM,
-                MediaStore.Audio.Media.DURATION,
-                MediaStore.Audio.Media.DATE_ADDED
-            ),
-            "${MediaStore.Audio.Media.IS_MUSIC} != 0",
-            null,
-            null
-        )
-
-        cursor?.use { c ->
-            val idColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
-            val titleColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
-            val artistColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
-            val albumColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
-            val durationColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
-            val dateColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
-
-            val scannedTracks = mutableListOf<Track>()
-            while (c.moveToNext()) {
-                val mediaId = c.getLong(idColumn)
-                val title = c.getString(titleColumn) ?: "Unknown Track"
-                val artist = c.getString(artistColumn) ?: "Unknown Artist"
-                val album = c.getString(albumColumn) ?: "Unknown Album"
-                val duration = c.getLong(durationColumn)
-                val dateAdded = c.getLong(dateColumn) * 1000 // Convert to MS
-                val contentUri = ContentUris.withAppendedId(
-                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                    mediaId
-                ).toString()
-
-                scannedTracks.add(
-                    Track(
-                        id = "local_$mediaId",
-                        title = title,
-                        artist = artist,
-                        album = album,
-                        mediaUri = contentUri,
-                        albumArtUri = null, // system Uri for album arts can be derived, or placeholder gradient drawn
-                        durationMs = duration,
-                        dateAdded = dateAdded
-                    )
-                )
-            }
-            if (scannedTracks.isNotEmpty()) {
-                trackDao.insertTracks(scannedTracks)
+    private fun crawlDirectoryForAudio(dir: java.io.File, maxDepth: Int = 5, currentDepth: Int = 0): List<java.io.File> {
+        val results = mutableListOf<java.io.File>()
+        if (currentDepth > maxDepth || !dir.exists() || !dir.isDirectory) return results
+        val files = try { dir.listFiles() } catch (e: Exception) { null } ?: return results
+        for (f in files) {
+            if (f.isDirectory) {
+                // Avoid hidden folders and system directories like 'Android'
+                if (!f.name.startsWith(".") && !f.name.equals("Android", ignoreCase = true)) {
+                    results.addAll(crawlDirectoryForAudio(f, maxDepth, currentDepth + 1))
+                }
+            } else if (f.isFile) {
+                val name = f.name.lowercase()
+                if (name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".m4a") || name.endsWith(".aac") || name.endsWith(".ogg") || name.endsWith(".amr")) {
+                    results.add(f)
+                }
             }
         }
+        return results
+    }
+
+    suspend fun scanDeviceAudio(context: Context): Int = withContext(Dispatchers.IO) {
+        val scannedTracks = mutableListOf<Track>()
+        // Fetch existing URIs to avoid overriding or duplicate inserts
+        val existingUris = trackDao.getAllTracks().firstOrNull()?.map { it.mediaUri }?.toSet() ?: emptySet()
+
+        // 1. Scan MediaStore
+        try {
+            val cursor = context.contentResolver.query(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                arrayOf(
+                    MediaStore.Audio.Media._ID,
+                    MediaStore.Audio.Media.TITLE,
+                    MediaStore.Audio.Media.ARTIST,
+                    MediaStore.Audio.Media.ALBUM,
+                    MediaStore.Audio.Media.DURATION,
+                    MediaStore.Audio.Media.DATE_ADDED
+                ),
+                null,
+                null,
+                null
+            )
+            cursor?.use { c ->
+                val idColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
+                val titleColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
+                val artistColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+                val albumColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+                val durationColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+                val dateColumn = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_ADDED)
+
+                while (c.moveToNext()) {
+                    val mediaId = c.getLong(idColumn)
+                    val title = c.getString(titleColumn) ?: "Unknown Track"
+                    val artist = c.getString(artistColumn) ?: "Unknown Artist"
+                    val album = c.getString(albumColumn) ?: "Unknown Album"
+                    val duration = c.getLong(durationColumn)
+                    val dateAdded = c.getLong(dateColumn) * 1000
+                    val contentUri = ContentUris.withAppendedId(
+                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                        mediaId
+                    ).toString()
+
+                    if (!existingUris.contains(contentUri)) {
+                        scannedTracks.add(
+                            Track(
+                                id = "local_$mediaId",
+                                title = title,
+                                artist = artist,
+                                album = album,
+                                mediaUri = contentUri,
+                                durationMs = duration,
+                                dateAdded = dateAdded
+                            )
+                        )
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 2. Scan standard folders directly as a robust fallback
+        val foldersToScan = listOfNotNull(
+            android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS),
+            android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
+            java.io.File("/storage/emulated/0/Download"),
+            java.io.File("/storage/emulated/0/Downloads"),
+            java.io.File("/storage/emulated/0/Music"),
+            java.io.File("/storage/emulated/0/Recordings"),
+            java.io.File("/storage/emulated/0/Telegram/Telegram Audio"),
+            java.io.File("/storage/emulated/0/WhatsApp/Media/WhatsApp Audio"),
+            java.io.File("/storage/emulated/0/snaptube/download"),
+            java.io.File("/storage/emulated/0/Snaptube/download/Snaptube Audio"),
+            java.io.File("/storage/emulated/0/Vidmate/download"),
+            java.io.File("/storage/emulated/0/Bluetooth"),
+            java.io.File("/storage/emulated/0/Documents"),
+            java.io.File("/storage/emulated/0/Audio"),
+            java.io.File("/storage/emulated/0/Podcasts"),
+            java.io.File("/storage/emulated/0/Alarms"),
+            java.io.File("/storage/emulated/0/Ringtones"),
+            java.io.File("/storage/emulated/0/DCIM")
+        )
+
+        val uniqueFiles = mutableSetOf<java.io.File>()
+        for (folder in foldersToScan) {
+            try {
+                if (folder.exists() && folder.isDirectory) {
+                    uniqueFiles.addAll(crawlDirectoryForAudio(folder))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        if (uniqueFiles.isNotEmpty()) {
+            val retriever = android.media.MediaMetadataRetriever()
+            for (file in uniqueFiles) {
+                val absolutePath = file.absolutePath
+                if (existingUris.contains(absolutePath) || scannedTracks.any { it.mediaUri == absolutePath }) {
+                    continue
+                }
+                try {
+                    retriever.setDataSource(absolutePath)
+                    val title = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE) ?: file.nameWithoutExtension
+                    val artist = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: "ملف صوتي محلي"
+                    val album = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ALBUM) ?: "الملفات المحملة"
+                    val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                    val duration = durationStr?.toLongOrNull() ?: 0L
+                    val dateAdded = file.lastModified()
+
+                    scannedTracks.add(
+                        Track(
+                            id = "file_${file.name.hashCode()}_${System.currentTimeMillis()}",
+                            title = title,
+                            artist = artist,
+                            album = album,
+                            mediaUri = absolutePath,
+                            durationMs = duration,
+                            dateAdded = dateAdded
+                        )
+                    )
+                } catch (e: Exception) {
+                    scannedTracks.add(
+                        Track(
+                            id = "file_${file.name.hashCode()}_${System.currentTimeMillis()}",
+                            title = file.nameWithoutExtension,
+                            artist = "ملف صوتي محلي",
+                            album = "الملفات المحملة",
+                            mediaUri = absolutePath,
+                            durationMs = 0L,
+                            dateAdded = file.lastModified()
+                        )
+                    )
+                }
+            }
+            try {
+                retriever.release()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        if (scannedTracks.isNotEmpty()) {
+            trackDao.insertTracks(scannedTracks)
+        }
+        scannedTracks.size
     }
 }
