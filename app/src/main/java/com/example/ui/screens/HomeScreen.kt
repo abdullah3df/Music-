@@ -11,9 +11,12 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -83,6 +86,8 @@ fun HomeScreen(
     val favorites by viewModel.favoriteTracks.collectAsState()
     val playbackState by viewModel.playbackState.collectAsState()
     val currentSortType by viewModel.sortType.collectAsState()
+    val themeId by viewModel.selectedThemeColor.collectAsState()
+    val activeTheme = remember(themeId) { AppThemeColor.fromId(themeId) }
 
     // Show toast message on playback errors
     LaunchedEffect(playbackState.errorMessage) {
@@ -190,22 +195,22 @@ fun HomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .drawBehind {
-                // Top-Left luxurious violet aura
+                // Top-Left luxurious dynamic primary aura
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            Color(0x2A8D55F3), // translucent primary purple
+                            activeTheme.primary.copy(alpha = 0.16f),
                             Color.Transparent
                         ),
-                        radius = size.width * 1.0f
+                        radius = size.width * 1.1f
                     ),
                     center = androidx.compose.ui.geometry.Offset(0f, 0f)
                 )
-                // Top-Right deep cyan aura for gorgeous high-fidelity interplay
+                // Top-Right dynamic primary container aura for deep elegant visual interplay
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            Color(0x1B00BCD4), // translucent teal/cyan
+                            activeTheme.primary.copy(alpha = 0.10f),
                             Color.Transparent
                         ),
                         radius = size.width * 0.9f
@@ -580,209 +585,254 @@ fun SettingsAndSupportDialog(
     val lang by viewModel.selectedLanguage.collectAsState()
     val themeId by viewModel.selectedThemeColor.collectAsState()
     
+    val autoplay by viewModel.autoplay.collectAsState()
+    val audioEnhancement by viewModel.audioEnhancement.collectAsState()
+    val hapticFeedback by viewModel.hapticFeedback.collectAsState()
+    
     var feedbackText by remember { mutableStateOf("") }
     
+    val emailIntentAction = {
+        try {
+            val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                data = android.net.Uri.parse("mailto:info.cik@cikcoin.art")
+                putExtra(android.content.Intent.EXTRA_SUBJECT, "Aura Music Support Request")
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, if (lang == "ar") "لم نجد تطبيق بريد مثبت!" else "No email client found!", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val webIntentAction = {
+        try {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.cikcoin.art"))
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            android.widget.Toast.makeText(context, if (lang == "ar") "تعذر فتح المتصفح!" else "Could not open browser!", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
     Dialog(
         onDismissRequest = dismissWithKeyboardClose,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Card(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(28.dp),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surface
             ),
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp)
-                .shadow(24.dp, shape = RoundedCornerShape(24.dp))
+                .fillMaxWidth(0.94f)
+                .padding(vertical = 16.dp)
+                .shadow(32.dp, shape = RoundedCornerShape(28.dp))
         ) {
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(18.dp),
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Header & Elegant dynamic Sound Logo
-                item {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(bottom = 4.dp)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(72.dp)
+                            .drawBehind {
+                                val primaryBrush = Brush.sweepGradient(
+                                    colors = listOf(
+                                        AppThemeColor.fromId(themeId).primary,
+                                        AppThemeColor.fromId(themeId).primary.copy(alpha = 0.2f),
+                                        AppThemeColor.fromId(themeId).primary
+                                    )
+                                )
+                                drawCircle(
+                                    brush = primaryBrush,
+                                    radius = size.width / 2,
+                                    style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                        width = 6.dp.toPx()
+                                    )
+                                )
+                                drawCircle(
+                                    color = AppThemeColor.fromId(themeId).primary.copy(alpha = 0.12f),
+                                    radius = size.width / 2.8f
+                                )
+                            }
                     ) {
-                        // Visual dynamic Aura Logo using canvas drawing
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(64.dp)
-                                .drawBehind {
-                                    val primaryBrush = Brush.sweepGradient(
-                                        colors = listOf(
-                                            AppThemeColor.fromId(themeId).primary,
-                                            AppThemeColor.fromId(themeId).primary.copy(alpha = 0.3f),
-                                            AppThemeColor.fromId(themeId).primary
-                                        )
-                                    )
-                                    drawCircle(
-                                        brush = primaryBrush,
-                                        radius = size.width / 2,
-                                        style = androidx.compose.ui.graphics.drawscope.Stroke(
-                                            width = 5.dp.toPx()
-                                        )
-                                    )
-                                    drawCircle(
-                                        color = AppThemeColor.fromId(themeId).primary.copy(alpha = 0.15f),
-                                        radius = size.width / 3
-                                    )
-                                }
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Headset,
-                                contentDescription = null,
-                                tint = AppThemeColor.fromId(themeId).primary,
-                                modifier = Modifier.size(32.dp)
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Text(
-                            text = Localization.get("app_title", lang),
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            ),
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        
-                        Text(
-                            text = "Audio Aura Player • v2.1",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        Icon(
+                            imageVector = Icons.Filled.Headset,
+                            contentDescription = null,
+                            tint = AppThemeColor.fromId(themeId).primary,
+                            modifier = Modifier.size(36.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Spacer(
-                        modifier = Modifier
-                            .height(1.dp)
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    
+                    Spacer(modifier = Modifier.height(10.dp))
+                    
+                    Text(
+                        text = Localization.get("app_title", lang),
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.2.sp
+                        ),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Text(
+                        text = "Audio Aura Player • v2.1",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                     )
                 }
                 
-                // 1. App Language Section
-                item {
+                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(
+                    modifier = Modifier
+                        .height(1.dp)
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                )
+                
+                // 1. App Language Section (Premium Grid Selection)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Language,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = Localization.get("app_language", lang),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.Start
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Language,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = Localization.get("app_language", lang),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        // Languages Row / Grid
-                        Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            AppLanguage.values().forEach { appLang ->
-                                val isSelected = appLang.code == lang
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { viewModel.setLanguage(appLang.code) },
-                                    label = {
-                                        Text(
-                                            text = appLang.nativeName,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                        selectedLabelColor = Color.Black,
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
-                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                    ),
+                            listOf(AppLanguage.AR, AppLanguage.EN).forEach { appLang ->
+                                LanguageGridCard(
+                                    appLang = appLang,
+                                    isSelected = appLang.code == lang,
+                                    primaryColor = MaterialTheme.colorScheme.primary,
+                                    onSelect = { viewModel.setLanguage(appLang.code) },
                                     modifier = Modifier.weight(1f)
                                 )
                             }
                         }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf(AppLanguage.FR, AppLanguage.ES).forEach { appLang ->
+                                LanguageGridCard(
+                                    appLang = appLang,
+                                    isSelected = appLang.code == lang,
+                                    primaryColor = MaterialTheme.colorScheme.primary,
+                                    onSelect = { viewModel.setLanguage(appLang.code) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            LanguageGridCard(
+                                appLang = AppLanguage.DE,
+                                isSelected = AppLanguage.DE.code == lang,
+                                primaryColor = MaterialTheme.colorScheme.primary,
+                                onSelect = { viewModel.setLanguage(AppLanguage.DE.code) },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
                 
+                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(
+                    modifier = Modifier
+                        .height(1.dp)
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                )
+                
                 // 2. Color Theme Customizer Section
-                item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.Start
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Palette,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = Localization.get("app_theme", lang),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        // 5 static theme selection row
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AppThemeColor.values().forEach { tc ->
-                                val isSelected = tc.id == themeId
+                        Icon(
+                            imageVector = Icons.Filled.Palette,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = Localization.get("app_theme", lang),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AppThemeColor.values().forEach { tc ->
+                            val isSelected = tc.id == themeId
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSelected) tc.primary.copy(alpha = 0.25f) 
+                                        else Color.Transparent
+                                    )
+                                    .clickable { viewModel.setThemeColor(tc.id) }
+                            ) {
                                 Box(
-                                    contentAlignment = Alignment.Center,
                                     modifier = Modifier
-                                        .size(40.dp)
+                                        .size(28.dp)
                                         .clip(CircleShape)
-                                        .background(
-                                            if (isSelected) tc.primary.copy(alpha = 0.25f) 
-                                            else Color.Transparent
-                                        )
-                                        .clickable { viewModel.setThemeColor(tc.id) }
+                                        .background(tc.primary)
+                                        .shadow(2.dp, CircleShape)
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(26.dp)
-                                            .clip(CircleShape)
-                                            .background(tc.primary)
-                                            .shadow(1.dp, CircleShape)
-                                    ) {
-                                        if (isSelected) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Check,
-                                                contentDescription = "Selected",
-                                                tint = Color.Black,
-                                                modifier = Modifier
-                                                    .size(14.dp)
-                                                    .align(Alignment.Center)
-                                            )
-                                        }
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Check,
+                                            contentDescription = "Selected",
+                                            tint = Color.Black,
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .align(Alignment.Center)
+                                        )
                                     }
                                 }
                             }
@@ -790,207 +840,470 @@ fun SettingsAndSupportDialog(
                     }
                 }
                 
-                // 3. Technical Support Section
-                item {
-                    Spacer(
-                        modifier = Modifier
-                            .height(1.dp)
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.Start
+                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(
+                    modifier = Modifier
+                        .height(1.dp)
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                )
+                
+                // 3. Pro Playback Controls & Settings Section
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.SupportAgent,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = Localization.get("support", lang),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        
-                        Spacer(modifier = Modifier.height(6.dp))
-                        
-                        Text(
-                            text = Localization.get("support_desc", lang),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            lineHeight = 15.sp,
-                            fontSize = 11.sp
+                        Icon(
+                            imageVector = Icons.Filled.Tune,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
                         )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        // Contact Info Card
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (lang == "ar") "خيارات الضبط المتقدمة" else "Advanced Playback Options",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Column(
-                                modifier = Modifier.padding(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            // Switch 1: Autoplay
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = Localization.get("support_email", lang),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontSize = 10.sp,
+                                        text = Localization.get("autoplay_title", lang),
+                                        style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold
                                     )
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "support@auramusic.app",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontSize = 10.sp,
-                                        color = MaterialTheme.colorScheme.primary
+                                        text = Localization.get("autoplay_desc", lang),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                        lineHeight = 12.sp
                                     )
                                 }
-                                Row(
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
+                                Switch(
+                                    checked = autoplay,
+                                    onCheckedChange = { viewModel.setAutoplay(it) },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.Black,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(1.dp).fillMaxWidth().background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)))
+                            
+                            // Switch 2: Audio Enhancement
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = Localization.get("support_hours", lang),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontSize = 10.sp,
+                                        text = Localization.get("equalizer_title", lang),
+                                        style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold
                                     )
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = Localization.get("support_hours_val", lang),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontSize = 10.sp,
-                                        color = MaterialTheme.colorScheme.secondary
+                                        text = Localization.get("equalizer_desc", lang),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                        lineHeight = 12.sp
                                     )
                                 }
-                                Row(
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
+                                Switch(
+                                    checked = audioEnhancement,
+                                    onCheckedChange = { viewModel.setAudioEnhancement(it) },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.Black,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                )
+                            }
+                            
+                            Spacer(modifier = Modifier.height(1.dp).fillMaxWidth().background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)))
+                            
+                            // Switch 3: Haptics
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = Localization.get("support_web", lang),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontSize = 10.sp,
+                                        text = Localization.get("haptic_title", lang),
+                                        style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.Bold
                                     )
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "www.auramusic.app",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontSize = 10.sp,
-                                        color = MaterialTheme.colorScheme.primary
+                                        text = Localization.get("haptic_desc", lang),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                        lineHeight = 12.sp
                                     )
                                 }
+                                Switch(
+                                    checked = hapticFeedback,
+                                    onCheckedChange = { viewModel.setHapticFeedback(it) },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.Black,
+                                        checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                )
                             }
                         }
                     }
                 }
                 
-                // 4. Live Message Support Form
-                item {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.Start
+                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(
+                    modifier = Modifier
+                        .height(1.dp)
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                )
+                
+                // 4. Technical Support Section (Integrated CIK Support Channels)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.Start
+                 ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Icon(
+                            imageVector = Icons.Filled.SupportAgent,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = Localization.get("support_form_title", lang),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            text = Localization.get("support", lang),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = feedbackText,
-                            onValueChange = { feedbackText = it },
-                            placeholder = {
-                                Text(
-                                    text = Localization.get("feedback_placeholder", lang),
-                                    fontSize = 10.sp
-                                )
-                            },
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(72.dp),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = TextFieldDefaults.colors(
-                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent,
-                                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                                unfocusedIndicatorColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                            )
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Button(
-                            onClick = {
-                                if (feedbackText.trim().isNotEmpty()) {
-                                    keyboardController?.hide()
-                                    focusManager.clearFocus()
-                                    android.widget.Toast.makeText(
-                                        context,
-                                        Localization.get("feedback_success", lang),
-                                        android.widget.Toast.LENGTH_LONG
-                                    ).show()
-                                    feedbackText = ""
-                                } else {
-                                    val alert = if (lang == "ar") "فضلاً اكتب رسالة قبل الإرسال!" else "Please write a message before sending!"
-                                    android.widget.Toast.makeText(context, alert, android.widget.Toast.LENGTH_SHORT).show()
-                                }
-                            },
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = Color.Black
-                            ),
-                            contentPadding = PaddingValues(vertical = 4.dp)
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = Localization.get("support_desc", lang),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        lineHeight = 16.sp,
+                        fontSize = 11.5.sp
+                    )
+                    
+                    Spacer(modifier = Modifier.height(10.dp))
+                    
+                    // Contact Info Card with Clickable mailto / website
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.Send,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = Localization.get("submit_feedback", lang),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
-                            )
+                            // Email row (Clickable!)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { emailIntentAction() }
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Email,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = Localization.get("support_email", lang),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Text(
+                                    text = "info.cik@cikcoin.art",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            
+                            // Hours row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Filled.AccessTime,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.secondary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = Localization.get("support_hours", lang),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Text(
+                                    text = Localization.get("support_hours_val", lang),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
+                            
+                            // Website row (Clickable!)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable { webIntentAction() }
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Language,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = Localization.get("support_web", lang),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Text(
+                                    text = "www.cikcoin.art",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                 }
                 
-                // Close button
-                item {
-                    TextButton(
-                        onClick = dismissWithKeyboardClose,
-                        modifier = Modifier.fillMaxWidth()
+                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(
+                    modifier = Modifier
+                        .height(1.dp)
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                )
+                
+                // 5. Live Message Support Form
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Text(
+                        text = Localization.get("support_form_title", lang),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = feedbackText,
+                        onValueChange = { feedbackText = it },
+                        placeholder = {
+                            Text(
+                                text = Localization.get("feedback_placeholder", lang),
+                                fontSize = 11.sp
+                            )
+                        },
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(80.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent,
+                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            if (feedbackText.trim().isNotEmpty()) {
+                                keyboardController?.hide()
+                                focusManager.clearFocus()
+                                android.widget.Toast.makeText(
+                                    context,
+                                    Localization.get("feedback_success", lang),
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                                feedbackText = ""
+                            } else {
+                                val alert = if (lang == "ar") "فضلاً اكتب رسالة قبل الإرسال!" else "Please write a message before sending!"
+                                android.widget.Toast.makeText(context, alert, android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = Color.Black
+                        ),
+                        contentPadding = PaddingValues(vertical = 10.dp)
                     ) {
+                        Icon(
+                            imageVector = Icons.Filled.Send,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = if (lang == "ar") "إغلاق التخصيص" else "Close",
+                            text = Localization.get("submit_feedback", lang),
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 12.sp
                         )
                     }
+                }
+                
+                // Close button
+                TextButton(
+                    onClick = dismissWithKeyboardClose,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = if (lang == "ar") "إغلاق التخصيص" else "Close",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LanguageGridCard(
+    appLang: AppLanguage,
+    isSelected: Boolean,
+    primaryColor: Color,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .height(56.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onSelect() }
+            .border(
+                width = if (isSelected) 1.5.dp else 0.dp,
+                color = if (isSelected) primaryColor else Color.Transparent,
+                shape = RoundedCornerShape(16.dp)
+            ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) primaryColor.copy(alpha = 0.12f)
+            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) primaryColor
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = when (appLang.code) {
+                        "ar" -> "ع"
+                        "en" -> "EN"
+                        "fr" -> "FR"
+                        "es" -> "ES"
+                        "de" -> "DE"
+                        else -> appLang.code.uppercase()
+                    },
+                    fontSize = if (appLang.code == "ar") 13.sp else 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(verticalArrangement = Arrangement.Center) {
+                Text(
+                    text = appLang.nativeName,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = if (isSelected) primaryColor else MaterialTheme.colorScheme.onSurface
+                )
+                if (appLang.displayName != appLang.nativeName) {
+                    Text(
+                        text = appLang.displayName,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.40f)
+                    )
                 }
             }
         }

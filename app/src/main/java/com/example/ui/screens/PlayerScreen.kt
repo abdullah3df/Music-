@@ -61,6 +61,26 @@ fun PlayerScreen(
     val playPosition = if (isUserSeeking) userPositionSelection else playbackState.currentPosition
     val totalDuration = playbackState.duration
 
+    val infiniteTransition = rememberInfiniteTransition(label = "player_infinite")
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.95f,
+        targetValue = 1.05f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "glowAlpha"
+    )
+
     // Premium radial glowing auras
     val glowColor1 = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
     val glowColor2 = MaterialTheme.colorScheme.background
@@ -116,7 +136,7 @@ fun PlayerScreen(
                 Spacer(modifier = Modifier.size(48.dp))
             }
 
-            // Big gorgeous album artwork sleeve with subtle rotation of the record
+            // Big gorgeous album artwork sleeve with slow breathing atmospheric glass outline
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -125,12 +145,35 @@ fun PlayerScreen(
                     .padding(top = 12.dp, bottom = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
+                // Background ambient soft shadow glow that breathes with the music
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize(0.85f * if (playbackState.isPlaying) pulseScale else 1f)
+                        .shadow(
+                            elevation = 32.dp,
+                            shape = RoundedCornerShape(28.dp),
+                            clip = false,
+                            ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = if (playbackState.isPlaying) glowAlpha else 0.25f),
+                            spotColor = MaterialTheme.colorScheme.primary.copy(alpha = if (playbackState.isPlaying) glowAlpha else 0.25f)
+                        )
+                )
+
                 Surface(
                     modifier = Modifier
-                        .fillMaxSize(0.92f)
+                        .fillMaxSize(0.90f)
                         .aspectRatio(1f)
-                        .shadow(24.dp, shape = RoundedCornerShape(24.dp))
-                        .clip(RoundedCornerShape(24.dp))
+                        .shadow(20.dp, shape = RoundedCornerShape(28.dp))
+                        .border(
+                            1.5.dp,
+                            Brush.linearGradient(
+                                listOf(
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                                    Color.Transparent
+                                )
+                            ),
+                            shape = RoundedCornerShape(28.dp)
+                        )
+                        .clip(RoundedCornerShape(28.dp))
                         .testTag("player_album_art")
                 ) {
                     TrackAlbumArt(track = track, modifier = Modifier.fillMaxSize())
@@ -273,26 +316,44 @@ fun PlayerScreen(
                     )
                 }
 
-                // Main Play Pause floating disk
-                Surface(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = CircleShape,
-                    modifier = Modifier
-                        .size(76.dp)
-                        .shadow(8.dp, shape = CircleShape)
-                        .clickable { viewModel.playbackManager.playOrPause() }
-                        .testTag("play_pause_button")
+                // Main Play Pause floating disk with outer glowing ring
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(90.dp)
                 ) {
+                    // Outer pulsating glowing ring
                     Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .size(if (playbackState.isPlaying) 82.dp * pulseScale else 76.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = if (playbackState.isPlaying) 0.12f else 0.05f))
+                            .border(
+                                1.5.dp,
+                                MaterialTheme.colorScheme.primary.copy(alpha = if (playbackState.isPlaying) glowAlpha else 0.15f),
+                                CircleShape
+                            )
+                    )
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .shadow(12.dp, shape = CircleShape)
+                            .clickable { viewModel.playbackManager.playOrPause() }
+                            .testTag("play_pause_button")
                     ) {
-                        Icon(
-                            imageVector = if (playbackState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            contentDescription = if (playbackState.isPlaying) "Pause" else "Play",
-                            modifier = Modifier.size(38.dp)
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Icon(
+                                imageVector = if (playbackState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                contentDescription = if (playbackState.isPlaying) "Pause" else "Play",
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
                 }
 

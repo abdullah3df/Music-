@@ -41,6 +41,15 @@ class MusicViewModel(
     private val _selectedThemeColor = MutableStateFlow(prefs.getString("theme", "purple") ?: "purple")
     val selectedThemeColor: StateFlow<String> = _selectedThemeColor.asStateFlow()
 
+    private val _autoplay = MutableStateFlow(prefs.getBoolean("autoplay", true))
+    val autoplay: StateFlow<Boolean> = _autoplay.asStateFlow()
+
+    private val _audioEnhancement = MutableStateFlow(prefs.getBoolean("audio_enhance", false))
+    val audioEnhancement: StateFlow<Boolean> = _audioEnhancement.asStateFlow()
+
+    private val _hapticFeedback = MutableStateFlow(prefs.getBoolean("haptic_feedback", true))
+    val hapticFeedback: StateFlow<Boolean> = _hapticFeedback.asStateFlow()
+
     fun setLanguage(langCode: String) {
         _selectedLanguage.value = langCode
         prefs.edit().putString("lang", langCode).apply()
@@ -49,6 +58,21 @@ class MusicViewModel(
     fun setThemeColor(themeId: String) {
         _selectedThemeColor.value = themeId
         prefs.edit().putString("theme", themeId).apply()
+    }
+
+    fun setAutoplay(enabled: Boolean) {
+        _autoplay.value = enabled
+        prefs.edit().putBoolean("autoplay", enabled).apply()
+    }
+
+    fun setAudioEnhancement(enabled: Boolean) {
+        _audioEnhancement.value = enabled
+        prefs.edit().putBoolean("audio_enhance", enabled).apply()
+    }
+
+    fun setHapticFeedback(enabled: Boolean) {
+        _hapticFeedback.value = enabled
+        prefs.edit().putBoolean("haptic_feedback", enabled).apply()
     }
 
     // Sorting State

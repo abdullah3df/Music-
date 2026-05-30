@@ -16,44 +16,59 @@ enum class AppThemeColor(
     val displayNameEn: String,
     val primary: Color,
     val primaryContainer: Color,
-    val background: Color = Color(0xFF131215),
-    val surface: Color = Color(0xFF1E1C21),
-    val surfaceVariant: Color = Color(0xFF28252C)
+    val background: Color,
+    val surface: Color,
+    val surfaceVariant: Color
 ) {
     TEAL(
         id = "teal",
-        displayNameAr = "النيلي البارد",
-        displayNameEn = "Teal Breeze",
-        primary = Color(0xFF00ADB5),
-        primaryContainer = Color(0xFF0F3438)
+        displayNameAr = "الفيروزي الفاخر",
+        displayNameEn = "Luxury Turquoise",
+        primary = Color(0xFF00E5FF),
+        primaryContainer = Color(0xFF00363D),
+        background = Color(0xFF070F12),
+        surface = Color(0xFF0F1B20),
+        surfaceVariant = Color(0xFF182930)
     ),
     PURPLE(
         id = "purple",
         displayNameAr = "البنفسجي الإمبراطوري",
-        displayNameEn = "Cosmic Purple",
-        primary = Color(0xFFBB86FC),
-        primaryContainer = Color(0xFF321A4B)
+        displayNameEn = "Imperial Amethyst",
+        primary = Color(0xFFD6A2E8),
+        primaryContainer = Color(0xFF3B1E4E),
+        background = Color(0xFF09070F),
+        surface = Color(0xFF110E1A),
+        surfaceVariant = Color(0xFF191526)
     ),
     GOLD(
         id = "gold",
-        displayNameAr = "الذهبي الدافئ",
-        displayNameEn = "Sunset Gold",
-        primary = Color(0xFFFFF176),
-        primaryContainer = Color(0xFF423B17)
+        displayNameAr = "الذهبي الشمباني",
+        displayNameEn = "Satin Champagne",
+        primary = Color(0xFFE5B869),
+        primaryContainer = Color(0xFF453018),
+        background = Color(0xFF0D0B07),
+        surface = Color(0xFF17130D),
+        surfaceVariant = Color(0xFF221D14)
     ),
     GREEN(
         id = "green",
-        displayNameAr = "الأخضر الزمردي",
-        displayNameEn = "Emerald Forest",
-        primary = Color(0xFF4CAF50),
-        primaryContainer = Color(0xFF163E18)
+        displayNameAr = "اليشم الإمبراطوري",
+        displayNameEn = "Imperial Jade",
+        primary = Color(0xFF5ED3A2),
+        primaryContainer = Color(0xFF113825),
+        background = Color(0xFF070B09),
+        surface = Color(0xFF0F1713),
+        surfaceVariant = Color(0xFF16231C)
     ),
     RED(
         id = "red",
-        displayNameAr = "الأحمر الياقوتي",
-        displayNameEn = "Rose Crimson",
-        primary = Color(0xFFE91E63),
-        primaryContainer = Color(0xFF491124)
+        displayNameAr = "الوردي المخملي الفاخر",
+        displayNameEn = "Velvet Rose",
+        primary = Color(0xFFFA4B6E),
+        primaryContainer = Color(0xFF4D101C),
+        background = Color(0xFF0B0506),
+        surface = Color(0xFF170D0E),
+        surfaceVariant = Color(0xFF231416)
     );
 
     companion object {
@@ -66,11 +81,11 @@ enum class AppThemeColor(
 object Localization {
     private val translations = mapOf(
         "app_title" to mapOf(
-            "ar" to "هالة الموسيقى",
+            "ar" to "AURA MUSIC",
             "en" to "AURA MUSIC",
-            "fr" to "AURA MUSIQUE",
-            "es" to "AURA MÚSICA",
-            "de" to "AURA MUSIK"
+            "fr" to "AURA MUSIC",
+            "es" to "AURA MUSIC",
+            "de" to "AURA MUSIC"
         ),
         "tab_sounds" to mapOf(
             "ar" to "الأصوات",
@@ -323,6 +338,48 @@ object Localization {
             "fr" to "Envoyer un Ticket de Support",
             "es" to "Enviar Mensaje de Soporte",
             "de" to "Support-Nachricht senden"
+        ),
+        "autoplay_title" to mapOf(
+            "ar" to "التشغيل التلقائي للتالي",
+            "en" to "Autoplay Next Track",
+            "fr" to "Lecture automatique",
+            "es" to "Reproducción automática",
+            "de" to "Autoplay"
+        ),
+        "autoplay_desc" to mapOf(
+            "ar" to "تشغيل المقطع التالي تلقائياً فور انتهاء الملف الحالي بدون توقف.",
+            "en" to "Plays the next audio track automatically when current finishes.",
+            "fr" to "Lit la piste suivante automatiquement.",
+            "es" to "Reproduce la siguiente pista automáticamente.",
+            "de" to "Spielt den nächsten Titel automatisch ab."
+        ),
+        "equalizer_title" to mapOf(
+            "ar" to "محسن الصوت الرقمي Aura DSP",
+            "en" to "Aura DSP Audio Engager",
+            "fr" to "Amélioration audio DSP",
+            "es" to "Mejora de audio DSP",
+            "de" to "DSP Audio-Verbesserung"
+        ),
+        "equalizer_desc" to mapOf(
+            "ar" to "تنشيط فلاتر تنقية صوتية ذكية لزيادة الوضوح والبيس.",
+            "en" to "Enable advanced digital filters for clarity and rich bass.",
+            "fr" to "Active les filtres DSP pour la clarté et les basses.",
+            "es" to "Activa filtros de audio para mayor claridad.",
+            "de" to "Aktiviert Audiofilter für mehr Klarheit."
+        ),
+        "haptic_title" to mapOf(
+            "ar" to "الاستجابة اللمسية الفاخرة",
+            "en" to "Premium Haptic Feedback",
+            "fr" to "Retour haptique luxueux",
+            "es" to "Respuesta háptica premium",
+            "de" to "Premium haptisches Feedback"
+        ),
+        "haptic_desc" to mapOf(
+            "ar" to "اهتزازات لمسية خفيفة تمنح شعوراً رائعاً واحترافياً عند الضغط.",
+            "en" to "Subtle haptic vibrations on control buttons for polished feel.",
+            "fr" to "Vibrations haptiques subtiles lors de l'appui.",
+            "es" to "Sutiles vibraciones táctiles al presionar.",
+            "de" to "Subtile haptische Rückmeldung beim Drücken."
         )
     )
 
