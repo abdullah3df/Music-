@@ -76,6 +76,10 @@ fun HomeScreen(
         }
     }
 
+    val scope = rememberCoroutineScope()
+    var isCopyingFile by remember { mutableStateOf(false) }
+    var showAddTrackDialog by remember { mutableStateOf(false) }
+
     var showPlaylistDialog by remember { mutableStateOf(false) }
     var showAddToPlaylistDialog by remember { mutableStateOf<Track?>(null) }
     var showSortMenu by remember { mutableStateOf(false) }
@@ -97,6 +101,37 @@ fun HomeScreen(
         hasPermission = isGranted
         if (isGranted) {
             viewModel.scanLocalFiles(context)
+        }
+    }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            isCopyingFile = true
+            scope.launch {
+                try {
+                    val fileName = "local_audio_${System.currentTimeMillis()}.mp3"
+                    val localPath = copyUriToInternalStorage(context, uri, fileName)
+                    if (localPath != null) {
+                        val meta = getAudioMetadata(context, uri)
+                        viewModel.addCustomTrack(
+                            title = meta.first,
+                            artist = meta.second,
+                            album = "الملفات الصوتية المحملة",
+                            mediaUri = localPath,
+                            durationMs = meta.third
+                        )
+                        android.widget.Toast.makeText(context, "تمت إضافة الملف بنجاح! 🎧", android.widget.Toast.LENGTH_SHORT).show()
+                    } else {
+                        android.widget.Toast.makeText(context, "فشل في استيراد الملف الصوتي", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                } catch (e: Exception) {
+                    android.widget.Toast.makeText(context, "خطأ أثناء إضافة الملف: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                } finally {
+                    isCopyingFile = false
+                }
+            }
         }
     }
 
@@ -206,7 +241,17 @@ fun HomeScreen(
                 )
             },
             floatingActionButton = {
-                if (selectedTab == 1) {
+                if (selectedTab == 0) {
+                    FloatingActionButton(
+                        onClick = { showAddTrackDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.testTag("add_track_fab")
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "Add Track")
+                    }
+                } else if (selectedTab == 1) {
                     var showAddRadioDialog by remember { mutableStateOf(false) }
                     FloatingActionButton(
                         onClick = { showAddRadioDialog = true },
@@ -391,6 +436,20 @@ fun HomeScreen(
             }
         )
     }
+
+    // Add Custom/Local Track Dialog
+    if (showAddTrackDialog) {
+        AddTrackDialog(
+            onDismiss = { showAddTrackDialog = false },
+            onSelectLocalFile = {
+                filePickerLauncher.launch("audio/*")
+            },
+            onAddRemoteUrl = { title, artist, album, url ->
+                viewModel.addCustomTrack(title, artist, album, url)
+            },
+            isCopying = isCopyingFile
+        )
+    }
 }
 
 @Composable
@@ -433,12 +492,12 @@ fun AllSongsTab(
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Scan local music files",
+                            "فحص ملفات الصوت المحلية",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "Tap to sync physical song files on your storage drive.",
+                            "اضغط هنا للسماح بالوصول ومزامنة ملفات الصوت الموجودة في جهازك تلقائيًا.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -448,17 +507,29 @@ fun AllSongsTab(
 
         if (tracks.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(24.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Icon(
+                        imageVector = Icons.Outlined.AudioFile,
+                        contentDescription = null,
+                        modifier = Modifier.size(72.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        "Loading available tracks...",
+                        "لا توجد أصوات مضافة",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "لم يتم العثور على أي ملفات صوتية بعد. اضغط على الزر الدائري (+) في الأسفل لإضافة ملفاتك الخاصة أو إدخال روابط خارجية.",
+                        textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                     )
@@ -1298,5 +1369,245 @@ fun AddRadioStationDialog(
             }
         }
     )
+}
+
+@Composable
+fun AddTrackDialog(
+    onDismiss: () -> Unit,
+    onSelectLocalFile: () -> Unit,
+    onAddRemoteUrl: (String, String, String, String) -> Unit,
+    isCopying: Boolean
+) {
+    var selectedOption by remember { mutableIntStateOf(0) } // 0: Local File, 1: Remote Link
+    
+    // Remote Link Fields
+    var title by remember { mutableStateOf("") }
+    var artist by remember { mutableStateOf("") }
+    var album by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf("") }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            tonalElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.width(340.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "إضافة ملف صوتي جديد",
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Modern Pill Option Selector
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(50))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    val optionStyleSelected = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                    val optionStyleUnselected = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Button(
+                        onClick = { selectedOption = 0 },
+                        colors = if (selectedOption == 0) optionStyleSelected else optionStyleUnselected,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        Text("ملف محلي", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                    }
+
+                    Button(
+                        onClick = { selectedOption = 1 },
+                        colors = if (selectedOption == 1) optionStyleSelected else optionStyleUnselected,
+                        shape = RoundedCornerShape(50),
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        Text("رابط صوتي", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                if (selectedOption == 0) {
+                    // LOCAL FILE PICKER UI
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.AudioFile,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "اختر ملفاً صوتياً من جهازك (مثال: MP3/M4A)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        if (isCopying) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("جاري نسخ واستيراد الملف...", style = MaterialTheme.typography.bodySmall)
+                        } else {
+                            Button(
+                                onClick = {
+                                    onSelectLocalFile()
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(Icons.Filled.Launch, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("فتح مستكشف الملفات")
+                            }
+                        }
+                    }
+                } else {
+                    // REMOTE URL STREAM UI
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = title,
+                            onValueChange = { title = it; errorMsg = null },
+                            label = { Text("عنوان الصوت") },
+                            placeholder = { Text("مثال: سوره الفاتحة") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = artist,
+                            onValueChange = { artist = it; errorMsg = null },
+                            label = { Text("اسم القارئ / المنشد") },
+                            placeholder = { Text("مثال: ماهر المعيقلي") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = album,
+                            onValueChange = { album = it },
+                            label = { Text("الألبوم / التصنيف (اختياري)") },
+                            placeholder = { Text("مثال: القرآن الكريم") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = url,
+                            onValueChange = { url = it; errorMsg = null },
+                            label = { Text("رابط الصوت المباشر (URL)") },
+                            placeholder = { Text("https://example.com/sound.mp3") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        errorMsg?.let { msg ->
+                            Text(
+                                text = msg,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("إلغاء")
+                    }
+                    if (selectedOption == 1) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (title.isBlank() || artist.isBlank() || url.isBlank()) {
+                                    errorMsg = "يرجى تعبئة كافة الحقول المطلوبة!"
+                                } else if (!url.startsWith("http://") && !url.startsWith("https://") && !url.contains(".")) {
+                                    errorMsg = "يرجى إدخال رابط بث صحيح ومباشر!"
+                                } else {
+                                    onAddRemoteUrl(title, artist, if (album.isBlank()) "الشبكة" else album, url)
+                                    onDismiss()
+                                }
+                            }
+                        ) {
+                            Text("إضافة")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun copyUriToInternalStorage(context: Context, uri: android.net.Uri, fileName: String): String? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val outputFile = java.io.File(context.filesDir, fileName)
+        inputStream.use { input ->
+            outputFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        outputFile.absolutePath
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
+
+private fun getAudioMetadata(context: Context, uri: android.net.Uri): Triple<String, String, Long> {
+    var title = "أثر صوّتي محلي"
+    var artist = "قاريء مجهول"
+    var duration = 0L
+    try {
+        val retriever = android.media.MediaMetadataRetriever()
+        retriever.setDataSource(context, uri)
+        val extractedTitle = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE)
+        if (!extractedTitle.isNullOrBlank()) {
+            title = extractedTitle
+        }
+        val extractedArtist = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ARTIST)
+        if (!extractedArtist.isNullOrBlank()) {
+            artist = extractedArtist
+        }
+        val durStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+        duration = durStr?.toLongOrNull() ?: 0L
+        retriever.release()
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return Triple(title, artist, duration)
 }
 

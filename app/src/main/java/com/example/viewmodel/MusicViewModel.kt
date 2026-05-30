@@ -257,6 +257,22 @@ class MusicViewModel(
         }
     }
 
+    // Adds a custom audio track manually (local file or stream)
+    fun addCustomTrack(title: String, artist: String, album: String, mediaUri: String, durationMs: Long = 0) {
+        viewModelScope.launch {
+            val id = "custom_track_${System.currentTimeMillis()}"
+            val track = Track(
+                id = id,
+                title = title,
+                artist = artist,
+                album = album,
+                mediaUri = mediaUri,
+                durationMs = durationMs
+            )
+            repository.insertTrack(track)
+        }
+    }
+
     override fun onCleared() {
         playbackManager.release()
         super.onCleared()

@@ -53,6 +53,10 @@ class MusicRepository(
         trackDao.deleteTrackById(trackId)
     }
 
+    suspend fun insertTrack(track: Track) = withContext(Dispatchers.IO) {
+        trackDao.insertTrack(track)
+    }
+
     suspend fun insertRadioStation(station: RadioStation) = withContext(Dispatchers.IO) {
         radioStationDao.insertRadioStation(station)
     }
