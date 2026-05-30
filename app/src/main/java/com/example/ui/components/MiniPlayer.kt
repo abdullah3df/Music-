@@ -36,12 +36,13 @@ fun MiniPlayer(
     val track = playbackState.currentTrack ?: return
 
     Surface(
-        color = MaterialTheme.colorScheme.surface,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.94f),
         shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 7.dp)
-            .shadow(12.dp, shape = RoundedCornerShape(16.dp))
+            .shadow(16.dp, shape = RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .testTag("mini_player_bar")
     ) {
@@ -51,12 +52,30 @@ fun MiniPlayer(
                 .fillMaxWidth()
                 .padding(10.dp)
         ) {
-            TrackAlbumArt(
-                track = track,
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .size(46.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            )
+                    .clip(RoundedCornerShape(10.dp))
+            ) {
+                TrackAlbumArt(
+                    track = track,
+                    modifier = Modifier.fillMaxSize()
+                )
+                if (playbackState.isPlaying) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LiveEqualizerVisualizer(
+                            color = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -69,7 +88,8 @@ fun MiniPlayer(
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 )
                 Text(
@@ -77,7 +97,7 @@ fun MiniPlayer(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
                 )
             }
 

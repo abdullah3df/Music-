@@ -206,8 +206,8 @@ class PlaybackManager(private val context: Context) {
                         .build()
                 )
             
-            // Force stream mime type to allow progressive MPEG decoder to load radio URLs without extensions securely
-            if (track.id.startsWith("radio_") || track.mediaUri.startsWith("http")) {
+            // Force stream mime type if it is explicitly an MP3 file, otherwise allow ExoPlayer to sniff HTTP headers
+            if (track.mediaUri.contains(".mp3") || track.mediaUri.contains("SoundHelix")) {
                 builder.setMimeType(androidx.media3.common.MimeTypes.AUDIO_MPEG)
             }
             

@@ -67,7 +67,7 @@ class MusicRepository(
             RadioStation(
                 id = "radio_quran_cairo",
                 name = "إذاعة القرآن الكريم - القاهرة",
-                streamUrl = "https://quranshow.shatbiah.sch.sa:8000/egypt",
+                streamUrl = "https://n01.radiojar.com/8s5u8v7g7v8uv",
                 isCustom = false
             ),
             RadioStation(
@@ -83,9 +83,9 @@ class MusicRepository(
                 isCustom = false
             ),
             RadioStation(
-                id = "radio_bbc_arabic",
-                name = "راديو بي بي سي العربية",
-                streamUrl = "https://stream.live.vc.bbcmedia.co.uk/bbc_arabic_radio",
+                id = "radio_abdulbasit",
+                name = "قناة الشيخ عبد الباسط 📖",
+                streamUrl = "https://backup.qurango.net/radio/abdulbasit_abdulsamad",
                 isCustom = false
             ),
             RadioStation(

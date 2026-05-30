@@ -61,7 +61,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("All Songs", "Radio", "Playlists", "Favorites")
+    val tabs = listOf("الأصوات", "الراديو", "القوائم", "المفضلة")
 
     val tracks by viewModel.allTracks.collectAsState()
     val playlists by viewModel.allPlaylists.collectAsState()
@@ -285,16 +285,36 @@ fun HomeScreen(
                                 .testTag("tab_$index"),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = title.uppercase(),
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.5.sp,
-                                    letterSpacing = 0.5.sp
-                                ),
-                                color = animatedTextColor,
-                                textAlign = TextAlign.Center
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(horizontal = 2.dp)
+                            ) {
+                                val tabIcon = when (index) {
+                                    0 -> Icons.Filled.AudioFile
+                                    1 -> Icons.Filled.Radio
+                                    2 -> Icons.Outlined.QueueMusic
+                                    else -> Icons.Filled.Favorite
+                                }
+                                Icon(
+                                    imageVector = tabIcon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp),
+                                    tint = animatedTextColor
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        letterSpacing = 0.sp
+                                    ),
+                                    color = animatedTextColor,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
                 }
@@ -549,13 +569,13 @@ fun FavoritesTab(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "Your Favorites Is Empty",
+                    "قائمة المفضلة فارغة",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Love a song? Tap the heart icon next to any track on the browsing list.",
+                    "هل أعجبك صوت أو تلاوة؟ اضغط على شعار القلب (❤️) بجانب أي مسار لإضافته إلى المفضلة.",
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
@@ -594,43 +614,62 @@ fun TrackRowItem(
 ) {
     val durationText = formatDuration(track.durationMs)
     var showMenu by remember { mutableStateOf(false) }
-    val backgroundModifier = if (isPlaying) {
-        Modifier
-            .background(Color(0x3349454F))
-            .drawBehind {
-                val strokeWidth = 4.dp.toPx()
-                drawLine(
-                    color = Color(0xFFD0BCFF),
-                    start = androidx.compose.ui.geometry.Offset(strokeWidth / 2, 0f),
-                    end = androidx.compose.ui.geometry.Offset(strokeWidth / 2, size.height),
-                    strokeWidth = strokeWidth
-                )
-            }
+
+    val containerColor = if (isPlaying) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f)
     } else {
-        Modifier
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
     }
 
-    Box(
+    val borderColor = if (isPlaying) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+    }
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
+        onClick = onTrackClick,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onTrackClick)
-            .then(backgroundModifier)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .shadow(if (isPlaying) 6.dp else 0.dp, shape = RoundedCornerShape(16.dp))
             .testTag("track_item_${track.id}")
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(12.dp)
         ) {
-            TrackAlbumArt(
-                track = track,
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            )
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            ) {
+                TrackAlbumArt(
+                    track = track,
+                    modifier = Modifier.fillMaxSize()
+                )
+                if (isPlaying) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LiveEqualizerVisualizer(
+                            color = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             Column(
                 modifier = Modifier.weight(1f)
@@ -639,17 +678,18 @@ fun TrackRowItem(
                     text = track.title,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyLarge.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = if (isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                     )
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "${track.artist} • ${track.album}",
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isPlaying) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    color = if (isPlaying) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
                 )
             }
 
@@ -657,15 +697,17 @@ fun TrackRowItem(
 
             Text(
                 text = durationText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                modifier = Modifier.padding(end = 4.dp)
             )
 
             IconButton(onClick = onFavoriteClick) {
                 Icon(
                     imageVector = if (track.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = "Toggle Favorite",
-                    tint = if (track.isFavorite) Color.Red else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    tint = if (track.isFavorite) Color(0xFFFF5252) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
@@ -674,7 +716,8 @@ fun TrackRowItem(
                     Icon(
                         imageVector = Icons.Filled.MoreVert,
                         contentDescription = "More options",
-                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        modifier = Modifier.size(22.dp)
                     )
                 }
                 DropdownMenu(
@@ -682,7 +725,7 @@ fun TrackRowItem(
                     onDismissRequest = { showMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Add to Playlist") },
+                        text = { Text("إضافة إلى قائمة التشغيل") },
                         onClick = {
                             showMenu = false
                             onPlaylistAddClick()
@@ -692,7 +735,7 @@ fun TrackRowItem(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Share Track") },
+                        text = { Text("مشاركة الأغنية") },
                         onClick = {
                             showMenu = false
                             onShareClick()
@@ -702,7 +745,7 @@ fun TrackRowItem(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Delete Track", color = MaterialTheme.colorScheme.error) },
+                        text = { Text("حذف الأغنية", color = MaterialTheme.colorScheme.error) },
                         onClick = {
                             showMenu = false
                             onDeleteClick()

@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -224,34 +225,36 @@ fun PlaylistItemRow(
     onShare: () -> Unit,
     onDeleteCompletely: () -> Unit
 ) {
-    val backgroundModifier = if (isPlaying) {
-        Modifier
-            .background(Color(0x3349454F))
-            .drawBehind {
-                val strokeWidth = 4.dp.toPx()
-                drawLine(
-                    color = Color(0xFFD0BCFF),
-                    start = androidx.compose.ui.geometry.Offset(strokeWidth / 2, 0f),
-                    end = androidx.compose.ui.geometry.Offset(strokeWidth / 2, size.height),
-                    strokeWidth = strokeWidth
-                )
-            }
+    var showMenu by remember { mutableStateOf(false) }
+
+    val containerColor = if (isPlaying) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f)
     } else {
-        Modifier
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
     }
 
-    Box(
+    val borderColor = if (isPlaying) {
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f)
+    }
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor),
+        onClick = onTrackClick,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onTrackClick)
-            .then(backgroundModifier)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .shadow(if (isPlaying) 6.dp else 0.dp, shape = RoundedCornerShape(16.dp))
             .testTag("playlist_item_${track.id}")
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(12.dp)
         ) {
             // Index counter
             Text(
@@ -262,12 +265,30 @@ fun PlaylistItemRow(
                 modifier = Modifier.width(28.dp)
             )
 
-            TrackAlbumArt(
-                track = track,
+            Box(
+                contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            )
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            ) {
+                TrackAlbumArt(
+                    track = track,
+                    modifier = Modifier.fillMaxSize()
+                )
+                if (isPlaying) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        com.example.ui.components.LiveEqualizerVisualizer(
+                            color = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -278,17 +299,18 @@ fun PlaylistItemRow(
                     text = track.title,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodyLarge.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = if (isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                     )
                 )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = track.artist,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (isPlaying) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isPlaying) MaterialTheme.colorScheme.primary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
                 )
             }
 
@@ -322,7 +344,6 @@ fun PlaylistItemRow(
             }
 
             Box {
-                var showMenu by remember { mutableStateOf(false) }
                 IconButton(onClick = { showMenu = true }, modifier = Modifier.size(36.dp)) {
                     Icon(
                         imageVector = Icons.Filled.MoreVert,
@@ -335,7 +356,7 @@ fun PlaylistItemRow(
                     onDismissRequest = { showMenu = false }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Remove from Playlist") },
+                        text = { Text("إزالة من قائمة التشغيل") },
                         onClick = {
                             showMenu = false
                             onRemove()
@@ -345,7 +366,7 @@ fun PlaylistItemRow(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Share Track") },
+                        text = { Text("مشاركة الأغنية") },
                         onClick = {
                             showMenu = false
                             onShare()
@@ -355,7 +376,7 @@ fun PlaylistItemRow(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Delete Track", color = MaterialTheme.colorScheme.error) },
+                        text = { Text("حذف الأغنية نهائياً", color = MaterialTheme.colorScheme.error) },
                         onClick = {
                             showMenu = false
                             onDeleteCompletely()
