@@ -8,6 +8,7 @@ import androidx.room.Transaction
 import com.example.data.model.Playlist
 import com.example.data.model.PlaylistTrack
 import com.example.data.model.Track
+import com.example.data.model.RadioStation
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -32,6 +33,9 @@ interface TrackDao {
 
     @Query("UPDATE tracks SET playCount = playCount + 1 WHERE id = :trackId")
     suspend fun incrementPlayCount(trackId: String)
+
+    @Query("DELETE FROM tracks WHERE id = :trackId")
+    suspend fun deleteTrackById(trackId: String)
 }
 
 @Dao
@@ -65,6 +69,9 @@ interface PlaylistDao {
     @Query("DELETE FROM playlist_tracks WHERE playlistId = :playlistId AND trackId = :trackId")
     suspend fun removeTrackFromPlaylist(playlistId: Long, trackId: String)
 
+    @Query("DELETE FROM playlist_tracks WHERE trackId = :trackId")
+    suspend fun deletePlaylistTracksByTrackId(trackId: String)
+
     @Query("DELETE FROM playlist_tracks WHERE playlistId = :playlistId")
     suspend fun clearPlaylistTracks(playlistId: Long)
 
@@ -80,3 +87,19 @@ interface PlaylistDao {
         insertPlaylistTracks(playlistTracks)
     }
 }
+
+@Dao
+interface RadioStationDao {
+    @Query("SELECT * FROM radio_stations ORDER BY name ASC")
+    fun getAllRadioStations(): Flow<List<RadioStation>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRadioStation(station: RadioStation)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRadioStations(stations: List<RadioStation>)
+
+    @Query("DELETE FROM radio_stations WHERE id = :id")
+    suspend fun deleteRadioStation(id: String)
+}
+

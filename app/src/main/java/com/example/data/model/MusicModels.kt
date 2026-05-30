@@ -35,3 +35,13 @@ data class PlaylistTrack(
     val trackId: String,
     val orderIndex: Int
 )
+
+@Entity(tableName = "radio_stations")
+data class RadioStation(
+    @PrimaryKey val id: String,
+    val name: String,
+    val streamUrl: String,
+    val isCustom: Boolean = false,
+    val dateAdded: Long = System.currentTimeMillis()
+)
+

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.AppDatabase
 import com.example.data.model.Playlist
 import com.example.data.model.Track
+import com.example.data.model.RadioStation
 import com.example.playback.PlaybackManager
 import com.example.playback.PlaybackState
 import com.example.repository.MusicRepository
@@ -71,11 +72,17 @@ class MusicViewModel(
 
     // Realtime playback state matching the ExoPlayer MediaController
     val playbackState: StateFlow<PlaybackState> = playbackManager.playbackState
+    
+    // Radio Stations State Flow
+    val allRadioStations: StateFlow<List<RadioStation>> = repository.allRadioStations
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         viewModelScope.launch {
             // Check for empty DB and insert sound helix standard samples
             repository.initDefaultTracksIfEmpty()
+            // Check for empty DB and insert default radio stations
+            repository.initDefaultRadioStationsIfEmpty()
         }
 
         // Listener to record playing statistics (most played)
@@ -134,6 +141,62 @@ class MusicViewModel(
             if (_activePlaylistId.value == playlistId) {
                 setActivePlaylist(null)
             }
+        }
+    }
+
+    // Delete track completely from app database
+    fun deleteTrack(trackId: String) {
+        viewModelScope.launch {
+            val current = playbackState.value.currentTrack
+            if (current?.id == trackId) {
+                playbackManager.stop()
+            }
+            repository.deleteTrack(trackId)
+            _activePlaylistId.value?.let { playlistId ->
+                setActivePlaylist(playlistId)
+            }
+        }
+    }
+
+    // Radio operations
+    fun addRadioStation(name: String, streamUrl: String) {
+        viewModelScope.launch {
+            val safeUrl = if (!streamUrl.startsWith("http://") && !streamUrl.startsWith("https://")) {
+                "https://$streamUrl"
+            } else {
+                streamUrl
+            }
+            val id = "radio_custom_${System.currentTimeMillis()}"
+            repository.insertRadioStation(
+                RadioStation(id = id, name = name, streamUrl = safeUrl, isCustom = true)
+            )
+        }
+    }
+
+    fun deleteRadioStation(stationId: String) {
+        viewModelScope.launch {
+            val current = playbackState.value.currentTrack
+            if (current?.id == stationId) {
+                playbackManager.stop()
+            }
+            repository.deleteRadioStation(stationId)
+        }
+    }
+
+    fun playRadioStation(station: RadioStation) {
+        viewModelScope.launch {
+            val track = Track(
+                id = station.id,
+                title = station.name,
+                artist = "راديو مباشر • Live Radio",
+                album = "راديو الإنترنت",
+                mediaUri = station.streamUrl,
+                albumArtUri = null,
+                durationMs = 0, // 0 signifies infinite/live stream duration
+                dateAdded = station.dateAdded
+            )
+            // Play this single track live stream
+            playbackManager.playTrackList(listOf(track), 0)
         }
     }
 
@@ -204,7 +267,7 @@ class MusicViewModel(
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(MusicViewModel::class.java)) {
                 val database = AppDatabase.getDatabase(context)
-                val repository = MusicRepository(database.trackDao(), database.playlistDao())
+                val repository = MusicRepository(database.trackDao(), database.playlistDao(), database.radioStationDao())
                 val playbackManager = PlaybackManager(context)
                 @Suppress("UNCHECKED_CAST")
                 return MusicViewModel(repository, playbackManager) as T

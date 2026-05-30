@@ -5,9 +5,11 @@ import android.content.Context
 import android.provider.MediaStore
 import com.example.data.local.PlaylistDao
 import com.example.data.local.TrackDao
+import com.example.data.local.RadioStationDao
 import com.example.data.model.Playlist
 import com.example.data.model.PlaylistTrack
 import com.example.data.model.Track
+import com.example.data.model.RadioStation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
@@ -15,11 +17,13 @@ import kotlinx.coroutines.withContext
 
 class MusicRepository(
     private val trackDao: TrackDao,
-    private val playlistDao: PlaylistDao
+    private val playlistDao: PlaylistDao,
+    private val radioStationDao: RadioStationDao
 ) {
     val allTracks: Flow<List<Track>> = trackDao.getAllTracks()
     val favoriteTracks: Flow<List<Track>> = trackDao.getFavoriteTracks()
     val allPlaylists: Flow<List<Playlist>> = playlistDao.getAllPlaylists()
+    val allRadioStations: Flow<List<RadioStation>> = radioStationDao.getAllRadioStations()
 
     fun getTracksForPlaylist(playlistId: Long): Flow<List<Track>> {
         return playlistDao.getTracksForPlaylist(playlistId)
@@ -42,6 +46,68 @@ class MusicRepository(
 
     suspend fun deletePlaylist(playlistId: Long) = withContext(Dispatchers.IO) {
         playlistDao.deletePlaylist(playlistId)
+    }
+
+    suspend fun deleteTrack(trackId: String) = withContext(Dispatchers.IO) {
+        playlistDao.deletePlaylistTracksByTrackId(trackId)
+        trackDao.deleteTrackById(trackId)
+    }
+
+    suspend fun insertRadioStation(station: RadioStation) = withContext(Dispatchers.IO) {
+        radioStationDao.insertRadioStation(station)
+    }
+
+    suspend fun deleteRadioStation(stationId: String) = withContext(Dispatchers.IO) {
+        radioStationDao.deleteRadioStation(stationId)
+    }
+
+    suspend fun initDefaultRadioStationsIfEmpty() = withContext(Dispatchers.IO) {
+        val existing = allRadioStations.firstOrNull() ?: emptyList()
+        val defaultStations = listOf(
+            RadioStation(
+                id = "radio_quran_cairo",
+                name = "إذاعة القرآن الكريم - القاهرة",
+                streamUrl = "https://quranshow.shatbiah.sch.sa:8000/egypt",
+                isCustom = false
+            ),
+            RadioStation(
+                id = "radio_quran_recitations",
+                name = "إذاعة التلاوات الخاشعة (مباشر)",
+                streamUrl = "https://backup.qurango.net/radio/mix",
+                isCustom = false
+            ),
+            RadioStation(
+                id = "radio_mcd",
+                name = "إذاعة مونت كارلو الدولية",
+                streamUrl = "https://mc-doualiya.ice.infomaniak.ch/mc-doualiya-96k.mp3",
+                isCustom = false
+            ),
+            RadioStation(
+                id = "radio_bbc_arabic",
+                name = "راديو بي بي سي العربية",
+                streamUrl = "https://stream.live.vc.bbcmedia.co.uk/bbc_arabic_radio",
+                isCustom = false
+            ),
+            RadioStation(
+                id = "radio_minshawi",
+                name = "تلاوات الشيخ المنشاوي 📖",
+                streamUrl = "https://backup.qurango.net/radio/mohammad_alminshawi",
+                isCustom = false
+            )
+        )
+        if (existing.isEmpty()) {
+            radioStationDao.insertRadioStations(defaultStations)
+        } else {
+            // Repair outdated non-working links for default channels or insert missing default channels
+            for (default in defaultStations) {
+                val found = existing.find { it.id == default.id }
+                if (found == null) {
+                    radioStationDao.insertRadioStation(default)
+                } else if (!found.isCustom && (found.streamUrl != default.streamUrl || found.name != default.name)) {
+                    radioStationDao.insertRadioStation(default)
+                }
+            }
+        }
     }
 
     suspend fun addTrackToPlaylist(playlistId: Long, trackId: String) = withContext(Dispatchers.IO) {

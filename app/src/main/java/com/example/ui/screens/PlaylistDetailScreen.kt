@@ -34,6 +34,7 @@ fun PlaylistDetailScreen(
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val tracks by viewModel.playlistTracks.collectAsState()
     val playbackState by viewModel.playbackState.collectAsState()
 
@@ -133,6 +134,20 @@ fun PlaylistDetailScreen(
                             },
                             onRemove = {
                                 viewModel.removeTrackFromPlaylist(playlist.id, track.id)
+                            },
+                            onShare = {
+                                val shareBody = "Listening to Aura Music:\n🎵 ${track.title}\n👥 Artist: ${track.artist}\n💿 Album: ${track.album}\n" +
+                                        if (track.mediaUri.startsWith("http")) "🔗 Link: ${track.mediaUri}" else ""
+                                val sendIntent = android.content.Intent().apply {
+                                    action = android.content.Intent.ACTION_SEND
+                                    putExtra(android.content.Intent.EXTRA_TEXT, shareBody)
+                                    type = "text/plain"
+                                }
+                                val shareIntent = android.content.Intent.createChooser(sendIntent, "Share Track Via")
+                                context.startActivity(shareIntent)
+                            },
+                            onDeleteCompletely = {
+                                viewModel.deleteTrack(track.id)
                             }
                         )
                     }
@@ -205,7 +220,9 @@ fun PlaylistItemRow(
     onTrackClick: () -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onShare: () -> Unit,
+    onDeleteCompletely: () -> Unit
 ) {
     val backgroundModifier = if (isPlaying) {
         Modifier
@@ -304,12 +321,50 @@ fun PlaylistItemRow(
                 }
             }
 
-            IconButton(onClick = onRemove, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    imageVector = Icons.Filled.RemoveCircleOutline,
-                    contentDescription = "Remove song",
-                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                )
+            Box {
+                var showMenu by remember { mutableStateOf(false) }
+                IconButton(onClick = { showMenu = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Remove from Playlist") },
+                        onClick = {
+                            showMenu = false
+                            onRemove()
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.RemoveCircleOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Share Track") },
+                        onClick = {
+                            showMenu = false
+                            onShare()
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Share, contentDescription = null)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete Track", color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showMenu = false
+                            onDeleteCompletely()
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                        }
+                    )
+                }
             }
         }
     }

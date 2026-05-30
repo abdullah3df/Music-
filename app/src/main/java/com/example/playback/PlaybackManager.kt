@@ -194,7 +194,7 @@ class PlaybackManager(private val context: Context) {
         controller.clearMediaItems()
 
         val mediaItems = tracks.map { track ->
-            MediaItem.Builder()
+            val builder = MediaItem.Builder()
                 .setMediaId(track.id)
                 .setUri(track.mediaUri)
                 .setMediaMetadata(
@@ -205,7 +205,13 @@ class PlaybackManager(private val context: Context) {
                         .setArtworkUri(track.albumArtUri?.let { Uri.parse(it) })
                         .build()
                 )
-                .build()
+            
+            // Force stream mime type to allow progressive MPEG decoder to load radio URLs without extensions securely
+            if (track.id.startsWith("radio_") || track.mediaUri.startsWith("http")) {
+                builder.setMimeType(androidx.media3.common.MimeTypes.AUDIO_MPEG)
+            }
+            
+            builder.build()
         }
 
         controller.setMediaItems(mediaItems, startTrackIndex, 0L)
@@ -251,6 +257,10 @@ class PlaybackManager(private val context: Context) {
             else -> Player.REPEAT_MODE_OFF
         }
         controller.repeatMode = nextMode
+    }
+
+    fun stop() {
+        mediaController?.stop()
     }
 
     fun release() {

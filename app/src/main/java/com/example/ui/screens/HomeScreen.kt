@@ -8,6 +8,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -44,6 +45,7 @@ import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.example.data.model.Playlist
 import com.example.data.model.Track
+import com.example.ui.components.LiveEqualizerVisualizer
 import com.example.playback.PlaybackState
 import com.example.viewmodel.MusicViewModel
 import com.example.viewmodel.SortType
@@ -59,7 +61,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("All Songs", "Playlists", "Favorites")
+    val tabs = listOf("All Songs", "Radio", "Playlists", "Favorites")
 
     val tracks by viewModel.allTracks.collectAsState()
     val playlists by viewModel.allPlaylists.collectAsState()
@@ -98,129 +100,206 @@ fun HomeScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Aura Music",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 26.sp,
-                            letterSpacing = (-0.5).sp
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .drawBehind {
+                // Top-Left luxurious violet aura
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0x2A8D55F3), // translucent primary purple
+                            Color.Transparent
                         ),
-                        modifier = Modifier.testTag("app_title")
-                    )
-                },
-                actions = {
-                    IconButton(
-                        onClick = { showSortMenu = true },
-                        modifier = Modifier.testTag("sort_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.SortByAlpha,
-                            contentDescription = "Sort Music"
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showSortMenu,
-                        onDismissRequest = { showSortMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("A - Z Title") },
-                            onClick = {
-                                viewModel.setSortType(SortType.TITLE)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Filled.TextFields,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Most Played") },
-                            onClick = {
-                                viewModel.setSortType(SortType.MOST_PLAYED)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Filled.TrendingUp,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Recently Added") },
-                            onClick = {
-                                viewModel.setSortType(SortType.RECENTLY_ADDED)
-                                showSortMenu = false
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Filled.Schedule,
-                                    contentDescription = null
-                                )
-                            }
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                        radius = size.width * 1.0f
+                    ),
+                    center = androidx.compose.ui.geometry.Offset(0f, 0f)
                 )
-            )
-        },
-        floatingActionButton = {
-            if (selectedTab == 1) {
-                FloatingActionButton(
-                    onClick = { showPlaylistDialog = true },
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.testTag("create_playlist_fab")
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Create Playlist")
-                }
+                // Top-Right deep cyan aura for gorgeous high-fidelity interplay
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0x1B00BCD4), // translucent teal/cyan
+                            Color.Transparent
+                        ),
+                        radius = size.width * 0.9f
+                    ),
+                    center = androidx.compose.ui.geometry.Offset(size.width, size.height * 0.1f)
+                )
             }
-        },
-        containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // Sliding navigation tab controls
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.primary,
-                divider = {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+    ) {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text(
+                            "AURA MUSIC",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.Black,
+                                fontSize = 23.sp,
+                                letterSpacing = 2.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier.testTag("app_title")
+                        )
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = { showSortMenu = true },
+                            modifier = Modifier.testTag("sort_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.SortByAlpha,
+                                contentDescription = "Sort Music",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("A - Z Title") },
+                                onClick = {
+                                    viewModel.setSortType(SortType.TITLE)
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Filled.TextFields,
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Most Played") },
+                                onClick = {
+                                    viewModel.setSortType(SortType.MOST_PLAYED)
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Filled.TrendingUp,
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Recently Added") },
+                                onClick = {
+                                    viewModel.setSortType(SortType.RECENTLY_ADDED)
+                                    showSortMenu = false
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Filled.Schedule,
+                                        contentDescription = null
+                                    )
+                                }
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent
+                    )
+                )
+            },
+            floatingActionButton = {
+                if (selectedTab == 1) {
+                    var showAddRadioDialog by remember { mutableStateOf(false) }
+                    FloatingActionButton(
+                        onClick = { showAddRadioDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.testTag("add_radio_fab")
+                    ) {
+                        Icon(Icons.Filled.Radio, contentDescription = "Add Radio Station")
+                    }
+                    if (showAddRadioDialog) {
+                        AddRadioStationDialog(
+                            onDismiss = { showAddRadioDialog = false },
+                            onAdd = { name, url ->
+                                viewModel.addRadioStation(name, url)
+                                showAddRadioDialog = false
+                            }
+                        )
+                    }
+                } else if (selectedTab == 2) {
+                    FloatingActionButton(
+                        onClick = { showPlaylistDialog = true },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier.testTag("create_playlist_fab")
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "Create Playlist")
+                    }
                 }
+            },
+            containerColor = Color.Transparent,
+            modifier = modifier
+        ) { paddingValues ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
             ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = {
+                // Customized sliding Pill Tabrow container
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .height(52.dp)
+                        .clip(RoundedCornerShape(26.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        val isSelected = selectedTab == index
+                        val animatedBg by animateColorAsState(
+                            targetValue = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            animationSpec = tween(280, easing = FastOutSlowInEasing),
+                            label = "tab_bg"
+                        )
+                        val animatedTextColor by animateColorAsState(
+                            targetValue = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            animationSpec = tween(280, easing = FastOutSlowInEasing),
+                            label = "tab_txt"
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(animatedBg)
+                                .clickable(
+                                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = { selectedTab = index }
+                                )
+                                .testTag("tab_$index"),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
                                 text = title.uppercase(),
-                                style = MaterialTheme.typography.titleSmall.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 1.2.sp,
-                                    color = if (selectedTab == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.5.sp,
+                                    letterSpacing = 0.5.sp
+                                ),
+                                color = animatedTextColor,
+                                textAlign = TextAlign.Center
                             )
-                        },
-                        modifier = Modifier.testTag("tab_$index")
-                    )
+                        }
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
             Box(modifier = Modifier.fillMaxSize()) {
                 when (selectedTab) {
@@ -240,26 +319,34 @@ fun HomeScreen(
                             viewModel.playbackManager.playTrackList(tracks, tracks.indexOf(clicked))
                         },
                         onFavoriteClick = { viewModel.toggleFavorite(it.id) },
-                        onPlaylistAddClick = { showAddToPlaylistDialog = it }
+                        onPlaylistAddClick = { showAddToPlaylistDialog = it },
+                        onShareClick = { shareTrack(context, it) },
+                        onDeleteClick = { viewModel.deleteTrack(it.id) }
                     )
-                    1 -> PlaylistsTab(
+                    1 -> RadioTab(
+                        viewModel = viewModel
+                    )
+                    2 -> PlaylistsTab(
                         playlists = playlists,
                         onPlaylistClick = onPlaylistClick,
                         onDeleteClick = { viewModel.deletePlaylist(it.id) }
                     )
-                    2 -> FavoritesTab(
+                    3 -> FavoritesTab(
                         favorites = favorites,
                         playbackState = playbackState,
                         onTrackClick = { clicked ->
                             viewModel.playbackManager.playTrackList(favorites, favorites.indexOf(clicked))
                         },
                         onFavoriteClick = { viewModel.toggleFavorite(it.id) },
-                        onPlaylistAddClick = { showAddToPlaylistDialog = it }
+                        onPlaylistAddClick = { showAddToPlaylistDialog = it },
+                        onShareClick = { shareTrack(context, it) },
+                        onDeleteClick = { viewModel.deleteTrack(it.id) }
                     )
                 }
             }
         }
     }
+}
 
     // New Playlist Modal
     if (showPlaylistDialog) {
@@ -294,7 +381,9 @@ fun AllSongsTab(
     playbackState: PlaybackState,
     onTrackClick: (Track) -> Unit,
     onFavoriteClick: (Track) -> Unit,
-    onPlaylistAddClick: (Track) -> Unit
+    onPlaylistAddClick: (Track) -> Unit,
+    onShareClick: (Track) -> Unit,
+    onDeleteClick: (Track) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         if (!hasPermission) {
@@ -366,7 +455,9 @@ fun AllSongsTab(
                         isPlaying = playbackState.currentTrack?.id == track.id,
                         onTrackClick = { onTrackClick(track) },
                         onFavoriteClick = { onFavoriteClick(track) },
-                        onPlaylistAddClick = { onPlaylistAddClick(track) }
+                        onPlaylistAddClick = { onPlaylistAddClick(track) },
+                        onShareClick = { onShareClick(track) },
+                        onDeleteClick = { onDeleteClick(track) }
                     )
                 }
             }
@@ -436,7 +527,9 @@ fun FavoritesTab(
     playbackState: PlaybackState,
     onTrackClick: (Track) -> Unit,
     onFavoriteClick: (Track) -> Unit,
-    onPlaylistAddClick: (Track) -> Unit
+    onPlaylistAddClick: (Track) -> Unit,
+    onShareClick: (Track) -> Unit,
+    onDeleteClick: (Track) -> Unit
 ) {
     if (favorites.isEmpty()) {
         Box(
@@ -480,7 +573,9 @@ fun FavoritesTab(
                     isPlaying = playbackState.currentTrack?.id == track.id,
                     onTrackClick = { onTrackClick(track) },
                     onFavoriteClick = { onFavoriteClick(track) },
-                    onPlaylistAddClick = { onPlaylistAddClick(track) }
+                    onPlaylistAddClick = { onPlaylistAddClick(track) },
+                    onShareClick = { onShareClick(track) },
+                    onDeleteClick = { onDeleteClick(track) }
                 )
             }
         }
@@ -493,9 +588,12 @@ fun TrackRowItem(
     isPlaying: Boolean,
     onTrackClick: () -> Unit,
     onFavoriteClick: () -> Unit,
-    onPlaylistAddClick: () -> Unit
+    onPlaylistAddClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     val durationText = formatDuration(track.durationMs)
+    var showMenu by remember { mutableStateOf(false) }
     val backgroundModifier = if (isPlaying) {
         Modifier
             .background(Color(0x3349454F))
@@ -571,12 +669,49 @@ fun TrackRowItem(
                 )
             }
 
-            IconButton(onClick = onPlaylistAddClick) {
-                Icon(
-                    imageVector = Icons.Filled.PlaylistAdd,
-                    contentDescription = "Add to playlist",
-                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-                )
+            Box {
+                IconButton(onClick = { showMenu = true }, modifier = Modifier.testTag("track_menu_button_${track.id}")) {
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = "More options",
+                        tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                }
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Add to Playlist") },
+                        onClick = {
+                            showMenu = false
+                            onPlaylistAddClick()
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.PlaylistAdd, contentDescription = null)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Share Track") },
+                        onClick = {
+                            showMenu = false
+                            onShareClick()
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Share, contentDescription = null)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete Track", color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showMenu = false
+                            onDeleteClick()
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Filled.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                        }
+                    )
+                }
             }
         }
     }
@@ -667,7 +802,24 @@ fun TrackAlbumArt(
     track: Track,
     modifier: Modifier = Modifier
 ) {
-    if (!track.albumArtUri.isNullOrEmpty()) {
+    if (track.id.startsWith("radio_")) {
+        Box(
+            modifier = modifier
+                .background(Brush.linearGradient(listOf(
+                    MaterialTheme.colorScheme.primaryContainer,
+                    MaterialTheme.colorScheme.secondaryContainer
+                )))
+                .padding(4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Radio,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxSize(0.5f)
+            )
+        }
+    } else if (!track.albumArtUri.isNullOrEmpty()) {
         AsyncImage(
             model = track.albumArtUri,
             contentDescription = "Album Art",
@@ -846,3 +998,262 @@ fun formatDuration(ms: Long): String {
     val seconds = totalSeconds % 60
     return String.format("%02d:%02d", minutes, seconds)
 }
+
+fun shareTrack(context: Context, track: Track) {
+    val shareBody = "Listening to Aura Music:\n🎵 ${track.title}\n👥 Artist: ${track.artist}\n💿 Album: ${track.album}\n" +
+            if (track.mediaUri.startsWith("http")) "🔗 Link: ${track.mediaUri}" else ""
+    val sendIntent = android.content.Intent().apply {
+        action = android.content.Intent.ACTION_SEND
+        putExtra(android.content.Intent.EXTRA_TEXT, shareBody)
+        type = "text/plain"
+    }
+    val shareIntent = android.content.Intent.createChooser(sendIntent, "Share Track Via")
+    context.startActivity(shareIntent)
+}
+
+@Composable
+fun RadioTab(
+    viewModel: MusicViewModel,
+    modifier: Modifier = Modifier
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val radioStations by viewModel.allRadioStations.collectAsState()
+    val playbackState by viewModel.playbackState.collectAsState()
+
+    if (radioStations.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+                Icon(
+                    imageVector = Icons.Filled.Radio,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "لم يتم العثور على محطات راديو",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                )
+                Text(
+                    "انقر على الزر بالأسفل لإضافة محطة مخصصة",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "راديو الإنترنت المباشر 📻",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
+            items(radioStations) { station ->
+                val isPlayingThis = playbackState.isPlaying && playbackState.currentTrack?.id == station.id
+                val isCurrentThis = playbackState.currentTrack?.id == station.id
+
+                Card(
+                    onClick = { viewModel.playRadioStation(station) },
+                    shape = RoundedCornerShape(20.dp),
+                    border = androidx.compose.foundation.BorderStroke(
+                        width = 1.dp,
+                        color = if (isCurrentThis) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    ),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isCurrentThis) {
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f)
+                        } else {
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f)
+                        }
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("radio_station_card_${station.id}")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // High-fidelity audio playing equalizer or static radio logo box
+                        if (isPlayingThis) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                LiveEqualizerVisualizer(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(4.dp)
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Radio,
+                                    tint = if (isCurrentThis) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(24.dp),
+                                    contentDescription = null
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = station.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isCurrentThis) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isPlayingThis) Color(0xFF4CAF50) else Color.Gray)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isPlayingThis) "البث مباشر مفعّل" else "جاهز للبث",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = {
+                                if (isPlayingThis) {
+                                    viewModel.playbackManager.playOrPause()
+                                } else {
+                                    viewModel.playRadioStation(station)
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (isPlayingThis) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                tint = if (isCurrentThis) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                contentDescription = "Play"
+                            )
+                        }
+
+                        if (station.isCustom) {
+                            IconButton(onClick = { viewModel.deleteRadioStation(station.id) }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Delete,
+                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                                    contentDescription = "Delete Status"
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            item {
+                Spacer(modifier = Modifier.height(80.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun AddRadioStationDialog(
+    onDismiss: () -> Unit,
+    onAdd: (String, String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf("") }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("إضافة إذاعة راديو جديدة") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        errorMsg = null
+                    },
+                    label = { Text("اسم إذاعة الراديو") },
+                    placeholder = { Text("مثال: إذاعة القرآن الكريم") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = {
+                        url = it
+                        errorMsg = null
+                    },
+                    label = { Text("رابط البث المباشر (URL)") },
+                    placeholder = { Text("https://example.com/stream.mp3") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                errorMsg?.let { msg ->
+                    Text(
+                        text = msg,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (name.isBlank() || url.isBlank()) {
+                        errorMsg = "يرجى ملء كافة الحقول المطلوبة!"
+                    } else if (!url.startsWith("http://") && !url.startsWith("https://") && !url.contains(".")) {
+                        errorMsg = "يرجى إدخال رابط بث صحيح!"
+                    } else {
+                        onAdd(name.trim(), url.trim())
+                    }
+                }
+            ) {
+                Text("إضافة")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("إلغاء")
+            }
+        }
+    )
+}
+

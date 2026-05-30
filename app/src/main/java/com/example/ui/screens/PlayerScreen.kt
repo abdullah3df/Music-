@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +30,7 @@ import com.example.data.model.Track
 import com.example.playback.PlaybackState
 import com.example.playback.RepeatMode
 import com.example.viewmodel.MusicViewModel
+import com.example.ui.components.LiveEqualizerVisualizer
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -172,40 +174,69 @@ fun PlayerScreen(
                     .fillMaxWidth()
                     .padding(bottom = 24.dp)
             ) {
-                Slider(
-                    value = if (totalDuration > 0) playPosition.toFloat() / totalDuration.toFloat() else 0f,
-                    onValueChange = { fraction ->
-                        isUserSeeking = true
-                        userPositionSelection = (fraction * totalDuration).toLong()
-                    },
-                    onValueChangeFinished = {
-                        isUserSeeking = false
-                        viewModel.playbackManager.seekTo(userPositionSelection)
-                    },
-                    colors = SliderDefaults.colors(
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
-                        thumbColor = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("player_seekbar")
-                )
+                if (track.id.startsWith("radio_")) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                            .border(androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)), RoundedCornerShape(16.dp))
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        LiveEqualizerVisualizer(
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier
+                                .size(28.dp)
+                                .padding(end = 6.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "بث راديو مباشر • LIVE BROADCAST",
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 0.5.sp
+                            )
+                        )
+                    }
+                } else {
+                    Slider(
+                        value = if (totalDuration > 0) playPosition.toFloat() / totalDuration.toFloat() else 0f,
+                        onValueChange = { fraction ->
+                            isUserSeeking = true
+                            userPositionSelection = (fraction * totalDuration).toLong()
+                        },
+                        onValueChangeFinished = {
+                            isUserSeeking = false
+                            viewModel.playbackManager.seekTo(userPositionSelection)
+                        },
+                        colors = SliderDefaults.colors(
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
+                            inactiveTrackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
+                            thumbColor = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("player_seekbar")
+                    )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = formatDuration(playPosition),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                    )
-                    Text(
-                        text = formatDuration(totalDuration),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = formatDuration(playPosition),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            text = formatDuration(totalDuration),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                        )
+                    }
                 }
             }
 

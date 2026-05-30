@@ -7,15 +7,17 @@ import androidx.room.RoomDatabase
 import com.example.data.model.Playlist
 import com.example.data.model.PlaylistTrack
 import com.example.data.model.Track
+import com.example.data.model.RadioStation
 
 @Database(
-    entities = [Track::class, Playlist::class, PlaylistTrack::class],
-    version = 2,
+    entities = [Track::class, Playlist::class, PlaylistTrack::class, RadioStation::class],
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun trackDao(): TrackDao
     abstract fun playlistDao(): PlaylistDao
+    abstract fun radioStationDao(): RadioStationDao
 
     companion object {
         @Volatile
