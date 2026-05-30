@@ -123,11 +123,11 @@ object Localization {
             "de" to "Optionen"
         ),
         "support" to mapOf(
-            "ar" to "الدعم والمساعدة",
-            "en" to "Support & Contact",
-            "fr" to "Support & Aide",
-            "es" to "Soporte y Ayuda",
-            "de" to "Support & Hilfe"
+            "ar" to "إرسال الاقتراحات",
+            "en" to "Send Suggestions",
+            "fr" to "Send Suggestions",
+            "es" to "Send Suggestions",
+            "de" to "Send Suggestions"
         ),
         "app_language" to mapOf(
             "ar" to "لغة التطبيق",
@@ -144,61 +144,20 @@ object Localization {
             "de" to "Visuelles App-Design"
         ),
         "support_desc" to mapOf(
-            "ar" to "يسعدنا دائماً سماع رأيك أو تقديم المساعدة في حال واجهت أي مشكلة أثناء استخدام Aura Music! تفضل بالتواصل معنا عبر قنواتنا المخصصة.",
-            "en" to "We love to hear from you or help if you face any issues while using Aura Music! Contact us through our direct support channels.",
-            "fr" to "Nous serions ravis de vous aider en cas de problème! Contactez notre support direct.",
-            "es" to "¡Nos encanta escucharte y ayudarte si tienes problemas! Contáctanos directamente.",
-            "de" to "Wir helfen Ihnen gerne bei Problemen! Kontaktieren Sie uns direkt."
+            "ar" to "يسعدنا دائماً تلقي اقتراحاتكم وملاحظاتكم القيمة لتطوير وإثراء تجربة Aura Music! تفضلوا بمراسلتنا مباشرة عبر البريد الإلكتروني.",
+            "en" to "We love hearing your valuable suggestions and feedback to enhance your Aura Music experience! Reach out to us via email.",
+            "fr" to "We love hearing your valuable suggestions and feedback to enhance your Aura Music experience! Reach out to us via email.",
+            "es" to "We love hearing your valuable suggestions and feedback to enhance your Aura Music experience! Reach out to us via email.",
+            "de" to "We love hearing your valuable suggestions and feedback to enhance your Aura Music experience! Reach out to us via email."
         ),
         "support_email" to mapOf(
-            "ar" to "البريد الإلكتروني للدعم:",
-            "en" to "Support Email:",
-            "fr" to "Courriel de support:",
-            "es" to "Email de soporte:",
-            "de" to "Support-E-Mail:"
+            "ar" to "بريد الاقتراحات:",
+            "en" to "Suggestions Email:",
+            "fr" to "Suggestions Email:",
+            "es" to "Suggestions Email:",
+            "de" to "Suggestions Email:"
         ),
-        "support_hours" to mapOf(
-            "ar" to "ساعات العمل:",
-            "en" to "Working Hours:",
-            "fr" to "Heures de travail:",
-            "es" to "Horas de atención:",
-            "de" to "Arbeitszeit:"
-        ),
-        "support_hours_val" to mapOf(
-            "ar" to "24 ساعة طوال أيام الأسبوع",
-            "en" to "24/7 Support Active",
-            "fr" to "Soutien actif 24h/24",
-            "es" to "Soporte activo 24/7",
-            "de" to "24/7 Support aktiv"
-        ),
-        "support_web" to mapOf(
-            "ar" to "الموقع الإلكتروني والتوثيق:",
-            "en" to "Website & Documentation:",
-            "fr" to "Site web & Documents:",
-            "es" to "Sitio web y Documentos:",
-            "de" to "Website & Dokumente:"
-        ),
-        "submit_feedback" to mapOf(
-            "ar" to "إرسال رسالة أو ملاحظة",
-            "en" to "Send a message / feedback",
-            "fr" to "Envoyer un message",
-            "es" to "Enviar comentarios / opinión",
-            "de" to "Nachricht / Feedback senden"
-        ),
-        "feedback_placeholder" to mapOf(
-            "ar" to "اكتب رسالتك هنا بالتفصيل مضافةً إليها معلومات التواصل الخاصة بك...",
-            "en" to "Write your message here in detail with your preferred contact info...",
-            "fr" to "Écrivez votre message ici avec vos coordonnées...",
-            "es" to "Escriba su mensaje aquí en detalle con su información de contacto...",
-            "de" to "Schreiben Sie Ihre Nachricht hier mit Ihren Kontaktdaten..."
-        ),
-        "feedback_success" to mapOf(
-            "ar" to "تم إرسال رسالتك لفريق الدعم بنجاح! سنقوم بالرد عليك قريباً. 💬",
-            "en" to "Feedback submitted successfully! We will get back to you shortly. 💬",
-            "fr" to "Commentaire envoyé avec succès! Merci. 💬",
-            "es" to "¡Comentario enviado correctamente! Gracias. 💬",
-            "de" to "Feedback erfolgreich gesendet! Vielen Dank. 💬"
-        ),
+
         "toast_scanned" to mapOf(
             "ar" to "تم العثور على %s من الملفات الصوتية الجديدة بالجهاز ومزامنتها بنجاح!",
             "en" to "Scanned & successfully synchronized %s new audio files from your device!",

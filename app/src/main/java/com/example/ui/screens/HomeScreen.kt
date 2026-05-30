@@ -589,26 +589,16 @@ fun SettingsAndSupportDialog(
     val audioEnhancement by viewModel.audioEnhancement.collectAsState()
     val hapticFeedback by viewModel.hapticFeedback.collectAsState()
     
-    var feedbackText by remember { mutableStateOf("") }
-    
     val emailIntentAction = {
         try {
+            val subjectStr = if (lang == "ar") "اقتراح بخصوص تطبيق Aura Music" else "Aura Music Suggestions"
             val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
                 data = android.net.Uri.parse("mailto:info.cik@cikcoin.art")
-                putExtra(android.content.Intent.EXTRA_SUBJECT, "Aura Music Support Request")
+                putExtra(android.content.Intent.EXTRA_SUBJECT, subjectStr)
             }
             context.startActivity(intent)
         } catch (e: Exception) {
             android.widget.Toast.makeText(context, if (lang == "ar") "لم نجد تطبيق بريد مثبت!" else "No email client found!", android.widget.Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    val webIntentAction = {
-        try {
-            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.cikcoin.art"))
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            android.widget.Toast.makeText(context, if (lang == "ar") "تعذر فتح المتصفح!" else "Could not open browser!", android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -990,7 +980,7 @@ fun SettingsAndSupportDialog(
                         .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                 )
                 
-                // 4. Technical Support Section (Integrated CIK Support Channels)
+                // 4. Send Suggestions via Email
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.Start
@@ -999,7 +989,7 @@ fun SettingsAndSupportDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.SupportAgent,
+                            imageVector = Icons.Filled.Email,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
@@ -1024,7 +1014,7 @@ fun SettingsAndSupportDialog(
                     
                     Spacer(modifier = Modifier.height(10.dp))
                     
-                    // Contact Info Card with Clickable mailto / website
+                    // Contact Info Card with Clickable mailto
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
@@ -1069,153 +1059,7 @@ fun SettingsAndSupportDialog(
                                     fontWeight = FontWeight.SemiBold
                                 )
                             }
-                            
-                            // Hours row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Filled.AccessTime,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.secondary,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = Localization.get("support_hours", lang),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Text(
-                                    text = Localization.get("support_hours_val", lang),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.secondary
-                                )
-                            }
-                            
-                            // Website row (Clickable!)
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .clickable { webIntentAction() }
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Language,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = Localization.get("support_web", lang),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Text(
-                                    text = "www.cikcoin.art",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
                         }
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                Spacer(
-                    modifier = Modifier
-                        .height(1.dp)
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                )
-                
-                // 5. Live Message Support Form
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.Start
-                ) {
-                    Text(
-                        text = Localization.get("support_form_title", lang),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    OutlinedTextField(
-                        value = feedbackText,
-                        onValueChange = { feedbackText = it },
-                        placeholder = {
-                            Text(
-                                text = Localization.get("feedback_placeholder", lang),
-                                fontSize = 11.sp
-                            )
-                        },
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.5.sp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(80.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = TextFieldDefaults.colors(
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            disabledContainerColor = Color.Transparent,
-                            focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                            unfocusedIndicatorColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                        )
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = {
-                            if (feedbackText.trim().isNotEmpty()) {
-                                keyboardController?.hide()
-                                focusManager.clearFocus()
-                                android.widget.Toast.makeText(
-                                    context,
-                                    Localization.get("feedback_success", lang),
-                                    android.widget.Toast.LENGTH_LONG
-                                ).show()
-                                feedbackText = ""
-                            } else {
-                                val alert = if (lang == "ar") "فضلاً اكتب رسالة قبل الإرسال!" else "Please write a message before sending!"
-                                android.widget.Toast.makeText(context, alert, android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = Color.Black
-                        ),
-                        contentPadding = PaddingValues(vertical = 10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Send,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = Localization.get("submit_feedback", lang),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
                     }
                 }
                 
