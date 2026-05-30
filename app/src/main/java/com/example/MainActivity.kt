@@ -11,6 +11,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.example.ui.theme.AppThemeColor
 import com.example.ui.screens.MainAppContainer
 import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.MusicViewModel
@@ -25,7 +28,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            val themeId by viewModel.selectedThemeColor.collectAsState()
+            val themeColor = AppThemeColor.fromId(themeId)
+            MyApplicationTheme(themeColor = themeColor) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

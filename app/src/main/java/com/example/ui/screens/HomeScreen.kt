@@ -34,6 +34,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,6 +43,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.example.data.model.Playlist
@@ -51,6 +54,10 @@ import com.example.viewmodel.MusicViewModel
 import com.example.viewmodel.SortType
 import kotlinx.coroutines.launch
 
+import com.example.ui.theme.Localization
+import com.example.ui.theme.AppLanguage
+import com.example.ui.theme.AppThemeColor
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,8 +67,16 @@ fun HomeScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val lang by viewModel.selectedLanguage.collectAsState()
+    var showSettingsDialog by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("الأصوات", "الراديو", "القوائم", "المفضلة")
+    
+    val tabs = listOf(
+        Localization.get("tab_sounds", lang),
+        Localization.get("tab_radio", lang),
+        Localization.get("tab_playlists", lang),
+        Localization.get("tab_favorites", lang)
+    )
 
     val tracks by viewModel.allTracks.collectAsState()
     val playlists by viewModel.allPlaylists.collectAsState()
@@ -86,14 +101,16 @@ fun HomeScreen(
 
     val isScanning by viewModel.isScanning.collectAsState()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(lang) {
         viewModel.scanResultEvent.collect { count ->
             if (count > 0) {
-                android.widget.Toast.makeText(context, "تم العثور على $count من الملفات الصوتية الجديدة بالجهاز ومزامنتها بنجاح! 🎵", android.widget.Toast.LENGTH_LONG).show()
+                val template = Localization.get("toast_scanned", lang)
+                val msg = template.replace("%s", count.toString())
+                android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
             } else if (count == 0) {
-                android.widget.Toast.makeText(context, "تم فحص الملفات! المكتبة مطابقة لملفات جهازك بالفعل. ✨", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, Localization.get("toast_up_to_date", lang), android.widget.Toast.LENGTH_SHORT).show()
             } else if (count == -1) {
-                android.widget.Toast.makeText(context, "حدث خطأ أثناء فحص ملفات جهازك الصوتية", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, Localization.get("toast_error_scan", lang), android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -202,7 +219,7 @@ fun HomeScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            "AURA MUSIC",
+                            Localization.get("app_title", lang),
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.Black,
                                 fontSize = 23.sp,
@@ -284,6 +301,16 @@ fun HomeScreen(
                                         contentDescription = null
                                     )
                                 }
+                            )
+                        }
+                        IconButton(
+                            onClick = { showSettingsDialog = true },
+                            modifier = Modifier.testTag("settings_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Settings,
+                                contentDescription = "Settings",
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     },
@@ -437,54 +464,57 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-            Box(modifier = Modifier.fillMaxSize()) {
-                when (selectedTab) {
-                    0 -> AllSongsTab(
-                        tracks = tracks,
-                        hasPermission = hasPermission,
-                        onRequestPermission = {
-                            val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                Manifest.permission.READ_MEDIA_AUDIO
-                            } else {
-                                Manifest.permission.READ_EXTERNAL_STORAGE
-                            }
-                            permissionLauncher.launch(permission)
-                        },
-                        isScanning = isScanning,
-                        onScanClick = { viewModel.scanLocalFiles(context) },
-                        playbackState = playbackState,
-                        onTrackClick = { clicked ->
-                            viewModel.playbackManager.playTrackList(tracks, tracks.indexOf(clicked))
-                        },
-                        onFavoriteClick = { viewModel.toggleFavorite(it.id) },
-                        onPlaylistAddClick = { showAddToPlaylistDialog = it },
-                        onShareClick = { shareTrack(context, it) },
-                        onDeleteClick = { viewModel.deleteTrack(it.id) }
-                    )
-                    1 -> RadioTab(
-                        viewModel = viewModel
-                    )
-                    2 -> PlaylistsTab(
-                        playlists = playlists,
-                        onPlaylistClick = onPlaylistClick,
-                        onDeleteClick = { viewModel.deletePlaylist(it.id) }
-                    )
-                    3 -> FavoritesTab(
-                        favorites = favorites,
-                        playbackState = playbackState,
-                        onTrackClick = { clicked ->
-                            viewModel.playbackManager.playTrackList(favorites, favorites.indexOf(clicked))
-                        },
-                        onFavoriteClick = { viewModel.toggleFavorite(it.id) },
-                        onPlaylistAddClick = { showAddToPlaylistDialog = it },
-                        onShareClick = { shareTrack(context, it) },
-                        onDeleteClick = { viewModel.deleteTrack(it.id) }
-                    )
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when (selectedTab) {
+                        0 -> AllSongsTab(
+                            tracks = tracks,
+                            hasPermission = hasPermission,
+                            onRequestPermission = {
+                                val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    Manifest.permission.READ_MEDIA_AUDIO
+                                } else {
+                                    Manifest.permission.READ_EXTERNAL_STORAGE
+                                }
+                                permissionLauncher.launch(permission)
+                            },
+                            isScanning = isScanning,
+                            onScanClick = { viewModel.scanLocalFiles(context) },
+                            playbackState = playbackState,
+                            onTrackClick = { clicked ->
+                                viewModel.playbackManager.playTrackList(tracks, tracks.indexOf(clicked))
+                            },
+                            onFavoriteClick = { viewModel.toggleFavorite(it.id) },
+                            onPlaylistAddClick = { showAddToPlaylistDialog = it },
+                            onShareClick = { shareTrack(context, it) },
+                            onDeleteClick = { viewModel.deleteTrack(it.id) },
+                            lang = lang
+                        )
+                        1 -> RadioTab(
+                            viewModel = viewModel
+                        )
+                        2 -> PlaylistsTab(
+                            playlists = playlists,
+                            onPlaylistClick = onPlaylistClick,
+                            onDeleteClick = { viewModel.deletePlaylist(it.id) },
+                            lang = lang
+                        )
+                        3 -> FavoritesTab(
+                            favorites = favorites,
+                            playbackState = playbackState,
+                            onTrackClick = { clicked ->
+                                viewModel.playbackManager.playTrackList(favorites, favorites.indexOf(clicked))
+                            },
+                            onFavoriteClick = { viewModel.toggleFavorite(it.id) },
+                            onPlaylistAddClick = { showAddToPlaylistDialog = it },
+                            onShareClick = { shareTrack(context, it) },
+                            onDeleteClick = { viewModel.deleteTrack(it.id) },
+                            lang = lang
+                        )
+                    }
                 }
             }
         }
     }
-}
 
     // New Playlist Modal
     if (showPlaylistDialog) {
@@ -523,6 +553,448 @@ fun HomeScreen(
             isCopying = isCopyingFile
         )
     }
+
+    // Settings and Custom Styling/Support Dialog
+    if (showSettingsDialog) {
+        SettingsAndSupportDialog(
+            viewModel = viewModel,
+            onDismiss = { showSettingsDialog = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsAndSupportDialog(
+    viewModel: MusicViewModel,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val dismissWithKeyboardClose = {
+        keyboardController?.hide()
+        focusManager.clearFocus()
+        onDismiss()
+    }
+    val lang by viewModel.selectedLanguage.collectAsState()
+    val themeId by viewModel.selectedThemeColor.collectAsState()
+    
+    var feedbackText by remember { mutableStateOf("") }
+    
+    Dialog(
+        onDismissRequest = dismissWithKeyboardClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp)
+                .shadow(24.dp, shape = RoundedCornerShape(24.dp))
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header & Elegant dynamic Sound Logo
+                item {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(bottom = 4.dp)
+                    ) {
+                        // Visual dynamic Aura Logo using canvas drawing
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .drawBehind {
+                                    val primaryBrush = Brush.sweepGradient(
+                                        colors = listOf(
+                                            AppThemeColor.fromId(themeId).primary,
+                                            AppThemeColor.fromId(themeId).primary.copy(alpha = 0.3f),
+                                            AppThemeColor.fromId(themeId).primary
+                                        )
+                                    )
+                                    drawCircle(
+                                        brush = primaryBrush,
+                                        radius = size.width / 2,
+                                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                            width = 5.dp.toPx()
+                                        )
+                                    )
+                                    drawCircle(
+                                        color = AppThemeColor.fromId(themeId).primary.copy(alpha = 0.15f),
+                                        radius = size.width / 3
+                                    )
+                                }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Headset,
+                                contentDescription = null,
+                                tint = AppThemeColor.fromId(themeId).primary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Text(
+                            text = Localization.get("app_title", lang),
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            ),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        
+                        Text(
+                            text = "Audio Aura Player • v2.1",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(
+                        modifier = Modifier
+                            .height(1.dp)
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    )
+                }
+                
+                // 1. App Language Section
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Language,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = Localization.get("app_language", lang),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Languages Row / Grid
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            AppLanguage.values().forEach { appLang ->
+                                val isSelected = appLang.code == lang
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { viewModel.setLanguage(appLang.code) },
+                                    label = {
+                                        Text(
+                                            text = appLang.nativeName,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = Color.Black,
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+                }
+                
+                // 2. Color Theme Customizer Section
+                item {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Palette,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = Localization.get("app_theme", lang),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // 5 static theme selection row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AppThemeColor.values().forEach { tc ->
+                                val isSelected = tc.id == themeId
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) tc.primary.copy(alpha = 0.25f) 
+                                            else Color.Transparent
+                                        )
+                                        .clickable { viewModel.setThemeColor(tc.id) }
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(26.dp)
+                                            .clip(CircleShape)
+                                            .background(tc.primary)
+                                            .shadow(1.dp, CircleShape)
+                                    ) {
+                                        if (isSelected) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Check,
+                                                contentDescription = "Selected",
+                                                tint = Color.Black,
+                                                modifier = Modifier
+                                                    .size(14.dp)
+                                                    .align(Alignment.Center)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 3. Technical Support Section
+                item {
+                    Spacer(
+                        modifier = Modifier
+                            .height(1.dp)
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.SupportAgent,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = Localization.get("support", lang),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(6.dp))
+                        
+                        Text(
+                            text = Localization.get("support_desc", lang),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            lineHeight = 15.sp,
+                            fontSize = 11.sp
+                        )
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        // Contact Info Card
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = Localization.get("support_email", lang),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "support@auramusic.app",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Row(
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = Localization.get("support_hours", lang),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = Localization.get("support_hours_val", lang),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.secondary
+                                    )
+                                }
+                                Row(
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        text = Localization.get("support_web", lang),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "www.auramusic.app",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 4. Live Message Support Form
+                item {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        Text(
+                            text = Localization.get("support_form_title", lang),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = feedbackText,
+                            onValueChange = { feedbackText = it },
+                            placeholder = {
+                                Text(
+                                    text = Localization.get("feedback_placeholder", lang),
+                                    fontSize = 10.sp
+                                )
+                            },
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(72.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = TextFieldDefaults.colors(
+                                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                focusedContainerColor = Color.Transparent,
+                                unfocusedContainerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent,
+                                focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+                                unfocusedIndicatorColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                            )
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Button(
+                            onClick = {
+                                if (feedbackText.trim().isNotEmpty()) {
+                                    keyboardController?.hide()
+                                    focusManager.clearFocus()
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        Localization.get("feedback_success", lang),
+                                        android.widget.Toast.LENGTH_LONG
+                                    ).show()
+                                    feedbackText = ""
+                                } else {
+                                    val alert = if (lang == "ar") "فضلاً اكتب رسالة قبل الإرسال!" else "Please write a message before sending!"
+                                    android.widget.Toast.makeText(context, alert, android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = Color.Black
+                            ),
+                            contentPadding = PaddingValues(vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Send,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = Localization.get("submit_feedback", lang),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        }
+                    }
+                }
+                
+                // Close button
+                item {
+                    TextButton(
+                        onClick = dismissWithKeyboardClose,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = if (lang == "ar") "إغلاق التخصيص" else "Close",
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -537,7 +1009,8 @@ fun AllSongsTab(
     onFavoriteClick: (Track) -> Unit,
     onPlaylistAddClick: (Track) -> Unit,
     onShareClick: (Track) -> Unit,
-    onDeleteClick: (Track) -> Unit
+    onDeleteClick: (Track) -> Unit,
+    lang: String = "ar"
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         if (!hasPermission) {
@@ -567,12 +1040,12 @@ fun AllSongsTab(
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "فحص ملفات الصوت المحلية",
+                            text = if (lang == "ar") "فحص ملفات الصوت المحلية" else "Scan Local Audio Files",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "اضغط هنا للسماح بالوصول ومزامنة ملفات الصوت الموجودة في جهازك تلقائيًا.",
+                            text = if (lang == "ar") "اضغط هنا للسماح بالوصول ومزامنة ملفات الصوت الموجودة في جهازك تلقائيًا." else "Tap here to grant permission and locate all offline audio files on your storage.",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
@@ -614,12 +1087,12 @@ fun AllSongsTab(
                     Spacer(modifier = Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            if (isScanning) "جاري البحث والمزامنة الآلية..." else "مسح ومزامنة جهازك تلقائياً",
+                            if (isScanning) Localization.get("scan_card_title_scanning", lang) else Localization.get("scan_card_title_idle", lang),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            if (isScanning) "فضلاً انتظر لعدة ثوانٍ حتى ننتهي من فحص وتحديث مكتبتك الصوتية من الذاكرة..." else "اضغط هنا للبحث الآلي في التحميلات والمجلدات وتحديث كافة ملفاتك الصوتية.",
+                            if (isScanning) Localization.get("scan_card_desc_scanning", lang) else Localization.get("scan_card_desc_idle", lang),
                             style = MaterialTheme.typography.bodySmall,
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
@@ -645,13 +1118,13 @@ fun AllSongsTab(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            "جاري فحص وتحديث أصوات جهازك...",
+                            Localization.get("scan_card_title_scanning", lang),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "يتم الآن البحث تلقائياً عن كافة الملفات الصوتية المخزنة والمحملة على جهازك ومزامنتها...",
+                            Localization.get("scan_card_desc_scanning", lang),
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
@@ -665,13 +1138,13 @@ fun AllSongsTab(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            "لا توجد أصوات مضافة",
+                            Localization.get("no_sounds_title", lang),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "لم يتم العثور على أي ملفات صوتية بعد. اضغط على الزر أدناه لمسح ومزامنة جهازك بالكامل تلقائياً.",
+                            Localization.get("no_sounds_desc", lang),
                             textAlign = TextAlign.Center,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
@@ -682,7 +1155,7 @@ fun AllSongsTab(
                                 onClick = onRequestPermission,
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Text("السماح بالوصول والفحص التلقائي")
+                                Text(Localization.get("btn_grant", lang))
                             }
                         } else {
                             Spacer(modifier = Modifier.height(16.dp))
@@ -692,7 +1165,7 @@ fun AllSongsTab(
                             ) {
                                 Icon(Icons.Filled.Autorenew, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("البدء بالفحص والمزامنة التلقائية")
+                                Text(Localization.get("btn_auto_scan", lang))
                             }
                         }
                     }
@@ -723,7 +1196,8 @@ fun AllSongsTab(
 fun PlaylistsTab(
     playlists: List<Playlist>,
     onPlaylistClick: (Playlist) -> Unit,
-    onDeleteClick: (Playlist) -> Unit
+    onDeleteClick: (Playlist) -> Unit,
+    lang: String = "ar"
 ) {
     if (playlists.isEmpty()) {
         Box(
@@ -743,13 +1217,13 @@ fun PlaylistsTab(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "No Playlists Yet",
+                    Localization.get("playlist_no_playlists", lang),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Click the floating + button to create your first music compilation.",
+                    Localization.get("playlist_desc_empty", lang),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
@@ -783,7 +1257,8 @@ fun FavoritesTab(
     onFavoriteClick: (Track) -> Unit,
     onPlaylistAddClick: (Track) -> Unit,
     onShareClick: (Track) -> Unit,
-    onDeleteClick: (Track) -> Unit
+    onDeleteClick: (Track) -> Unit,
+    lang: String = "ar"
 ) {
     if (favorites.isEmpty()) {
         Box(
@@ -803,13 +1278,13 @@ fun FavoritesTab(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "قائمة المفضلة فارغة",
+                    Localization.get("favorites_empty", lang),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "هل أعجبك صوت أو تلاوة؟ اضغط على شعار القلب (❤️) بجانب أي مسار لإضافته إلى المفضلة.",
+                    Localization.get("favorites_desc", lang),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
@@ -1135,7 +1610,17 @@ fun CreatePlaylistDialog(
     onCreate: (String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
-    Dialog(onDismissRequest = onDismiss) {
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val dismissWithKeyboardClose = {
+        keyboardController?.hide()
+        focusManager.clearFocus()
+        onDismiss()
+    }
+    Dialog(
+        onDismissRequest = dismissWithKeyboardClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             tonalElevation = 6.dp,
@@ -1170,12 +1655,18 @@ fun CreatePlaylistDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(onClick = dismissWithKeyboardClose) {
                         Text("Cancel")
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(
-                        onClick = { if (name.isNotBlank()) onCreate(name) },
+                        onClick = {
+                            if (name.isNotBlank()) {
+                                keyboardController?.hide()
+                                focusManager.clearFocus()
+                                onCreate(name)
+                            }
+                        },
                         enabled = name.isNotBlank(),
                         modifier = Modifier.testTag("playlist_save_button")
                     ) {
@@ -1469,9 +1960,16 @@ fun AddRadioStationDialog(
     var name by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val dismissWithKeyboardClose = {
+        keyboardController?.hide()
+        focusManager.clearFocus()
+        onDismiss()
+    }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = dismissWithKeyboardClose,
         title = { Text("إضافة إذاعة راديو جديدة") },
         text = {
             Column(
@@ -1519,6 +2017,8 @@ fun AddRadioStationDialog(
                     } else if (!url.startsWith("http://") && !url.startsWith("https://") && !url.contains(".")) {
                         errorMsg = "يرجى إدخال رابط بث صحيح!"
                     } else {
+                        keyboardController?.hide()
+                        focusManager.clearFocus()
                         onAdd(name.trim(), url.trim())
                     }
                 }
@@ -1527,7 +2027,7 @@ fun AddRadioStationDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(onClick = dismissWithKeyboardClose) {
                 Text("إلغاء")
             }
         }
@@ -1549,8 +2049,18 @@ fun AddTrackDialog(
     var album by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf<String?>(null) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val focusManager = LocalFocusManager.current
+    val dismissWithKeyboardClose = {
+        keyboardController?.hide()
+        focusManager.clearFocus()
+        onDismiss()
+    }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = dismissWithKeyboardClose,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             tonalElevation = 8.dp,
@@ -1708,7 +2218,7 @@ fun AddTrackDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(onClick = dismissWithKeyboardClose) {
                         Text("إلغاء")
                     }
                     if (selectedOption == 1) {
@@ -1720,6 +2230,8 @@ fun AddTrackDialog(
                                 } else if (!url.startsWith("http://") && !url.startsWith("https://") && !url.contains(".")) {
                                     errorMsg = "يرجى إدخال رابط بث صحيح ومباشر!"
                                 } else {
+                                    keyboardController?.hide()
+                                    focusManager.clearFocus()
                                     onAddRemoteUrl(title, artist, if (album.isBlank()) "الشبكة" else album, url)
                                     onDismiss()
                                 }

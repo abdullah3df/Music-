@@ -28,8 +28,28 @@ enum class SortType {
 
 class MusicViewModel(
     private val repository: MusicRepository,
-    val playbackManager: PlaybackManager
+    val playbackManager: PlaybackManager,
+    private val context: Context
 ) : ViewModel() {
+
+    // Preferences values for Language and Theme Color
+    private val prefs = context.getSharedPreferences("aura_settings", Context.MODE_PRIVATE)
+
+    private val _selectedLanguage = MutableStateFlow(prefs.getString("lang", "ar") ?: "ar")
+    val selectedLanguage: StateFlow<String> = _selectedLanguage.asStateFlow()
+
+    private val _selectedThemeColor = MutableStateFlow(prefs.getString("theme", "purple") ?: "purple")
+    val selectedThemeColor: StateFlow<String> = _selectedThemeColor.asStateFlow()
+
+    fun setLanguage(langCode: String) {
+        _selectedLanguage.value = langCode
+        prefs.edit().putString("lang", langCode).apply()
+    }
+
+    fun setThemeColor(themeId: String) {
+        _selectedThemeColor.value = themeId
+        prefs.edit().putString("theme", themeId).apply()
+    }
 
     // Sorting State
     private val _sortType = MutableStateFlow(SortType.TITLE)
@@ -305,7 +325,7 @@ class MusicViewModel(
                 val repository = MusicRepository(database.trackDao(), database.playlistDao(), database.radioStationDao())
                 val playbackManager = PlaybackManager(context)
                 @Suppress("UNCHECKED_CAST")
-                return MusicViewModel(repository, playbackManager) as T
+                return MusicViewModel(repository, playbackManager, context) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
