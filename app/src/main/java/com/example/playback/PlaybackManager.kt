@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
 
 data class PlaybackState(
     val currentTrack: Track? = null,
@@ -265,6 +266,11 @@ class PlaybackManager(private val context: Context) {
 
     fun release() {
         stopProgressTracker()
+        try {
+            scope.cancel()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         controllerFuture?.let {
             MediaController.releaseFuture(it)
         }

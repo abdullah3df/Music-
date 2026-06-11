@@ -593,7 +593,7 @@ fun SettingsAndSupportDialog(
         try {
             val subjectStr = if (lang == "ar") "اقتراح بخصوص تطبيق Aura Music" else "Aura Music Suggestions"
             val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-                data = android.net.Uri.parse("mailto:info.cik@cikcoin.art")
+                data = android.net.Uri.parse("mailto:suggestions@auramusic.app")
                 putExtra(android.content.Intent.EXTRA_SUBJECT, subjectStr)
             }
             context.startActivity(intent)
@@ -1052,7 +1052,7 @@ fun SettingsAndSupportDialog(
                                     )
                                 }
                                 Text(
-                                    text = "info.cik@cikcoin.art",
+                                    text = "suggestions@auramusic.app",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.primary,
@@ -2423,8 +2423,8 @@ private fun getAudioMetadata(context: Context, uri: android.net.Uri): Triple<Str
     var title = "أثر صوّتي محلي"
     var artist = "قاريء مجهول"
     var duration = 0L
+    val retriever = android.media.MediaMetadataRetriever()
     try {
-        val retriever = android.media.MediaMetadataRetriever()
         retriever.setDataSource(context, uri)
         val extractedTitle = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE)
         if (!extractedTitle.isNullOrBlank()) {
@@ -2436,9 +2436,14 @@ private fun getAudioMetadata(context: Context, uri: android.net.Uri): Triple<Str
         }
         val durStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
         duration = durStr?.toLongOrNull() ?: 0L
-        retriever.release()
     } catch (e: Exception) {
         e.printStackTrace()
+    } finally {
+        try {
+            retriever.release()
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+        }
     }
     return Triple(title, artist, duration)
 }

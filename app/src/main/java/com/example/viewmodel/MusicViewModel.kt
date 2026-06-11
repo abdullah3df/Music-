@@ -167,11 +167,14 @@ class MusicViewModel(
         }
     }
 
+    private var playlistCollectJob: kotlinx.coroutines.Job? = null
+
     // Load active playlist tracks
     fun setActivePlaylist(playlistId: Long?) {
         _activePlaylistId.value = playlistId
+        playlistCollectJob?.cancel()
         if (playlistId != null) {
-            viewModelScope.launch {
+            playlistCollectJob = viewModelScope.launch {
                 repository.getTracksForPlaylist(playlistId).collect { tracks ->
                     _playlistTracksDb.value = tracks
                 }

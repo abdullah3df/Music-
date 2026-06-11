@@ -297,12 +297,14 @@ class MusicRepository(
         }
 
         if (uniqueFiles.isNotEmpty()) {
-            val retriever = android.media.MediaMetadataRetriever()
+            val scannedUris = scannedTracks.map { it.mediaUri }.toMutableSet()
             for (file in uniqueFiles) {
                 val absolutePath = file.absolutePath
-                if (existingUris.contains(absolutePath) || scannedTracks.any { it.mediaUri == absolutePath }) {
+                if (existingUris.contains(absolutePath) || scannedUris.contains(absolutePath)) {
                     continue
                 }
+                var success = false
+                val retriever = android.media.MediaMetadataRetriever()
                 try {
                     retriever.setDataSource(absolutePath)
                     val title = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_TITLE) ?: file.nameWithoutExtension
@@ -323,7 +325,19 @@ class MusicRepository(
                             dateAdded = dateAdded
                         )
                     )
+                    scannedUris.add(absolutePath)
+                    success = true
                 } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    try {
+                        retriever.release()
+                    } catch (ex: Exception) {
+                        ex.printStackTrace()
+                    }
+                }
+
+                if (!success) {
                     scannedTracks.add(
                         Track(
                             id = "file_${file.name.hashCode()}_${System.currentTimeMillis()}",
@@ -335,12 +349,8 @@ class MusicRepository(
                             dateAdded = file.lastModified()
                         )
                     )
+                    scannedUris.add(absolutePath)
                 }
-            }
-            try {
-                retriever.release()
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
 
