@@ -27,6 +27,17 @@ fun MainAppContainer(
     val playbackState by viewModel.playbackState.collectAsState()
     val isTrackLoaded = playbackState.currentTrack != null
 
+    var lastTrackId by remember { mutableStateOf<String?>(null) }
+
+    // Auto-open full professional player when a new track is loaded and begins playing
+    LaunchedEffect(playbackState.currentTrack) {
+        val currentTrack = playbackState.currentTrack
+        if (currentTrack != null && currentTrack.id != lastTrackId) {
+            lastTrackId = currentTrack.id
+            showFullPlayer = true
+        }
+    }
+
     // Support standard device Back Button triggers
     BackHandler(enabled = showFullPlayer || currentScreen is AppScreen.PlaylistDetail) {
         if (showFullPlayer) {
@@ -54,6 +65,7 @@ fun MainAppContainer(
                             onPlaylistClick = { playlist ->
                                 currentScreen = AppScreen.PlaylistDetail(playlist)
                             },
+                            onTrackClick = { showFullPlayer = true },
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -64,6 +76,7 @@ fun MainAppContainer(
                             onBackClick = {
                                 currentScreen = AppScreen.Browse
                             },
+                            onTrackClick = { showFullPlayer = true },
                             modifier = Modifier.fillMaxSize()
                         )
                     }

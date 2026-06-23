@@ -67,6 +67,7 @@ import com.example.ui.theme.AppThemeColor
 fun HomeScreen(
     viewModel: MusicViewModel,
     onPlaylistClick: (Playlist) -> Unit,
+    onTrackClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -325,6 +326,7 @@ fun HomeScreen(
                 )
             },
             floatingActionButton = {
+                val fabPaddingBottom = if (playbackState.currentTrack != null) 80.dp else 0.dp
                 if (selectedTab == 0) {
                     FloatingActionButton(
                         onClick = {
@@ -342,7 +344,9 @@ fun HomeScreen(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.testTag("add_track_fab")
+                        modifier = Modifier
+                            .padding(bottom = fabPaddingBottom)
+                            .testTag("add_track_fab")
                     ) {
                         if (isScanning) {
                             CircularProgressIndicator(
@@ -361,7 +365,9 @@ fun HomeScreen(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.testTag("add_radio_fab")
+                        modifier = Modifier
+                            .padding(bottom = fabPaddingBottom)
+                            .testTag("add_radio_fab")
                     ) {
                         Icon(Icons.Filled.Radio, contentDescription = "Add Radio Station")
                     }
@@ -380,7 +386,9 @@ fun HomeScreen(
                         containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = MaterialTheme.colorScheme.onPrimary,
                         shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.testTag("create_playlist_fab")
+                        modifier = Modifier
+                            .padding(bottom = fabPaddingBottom)
+                            .testTag("create_playlist_fab")
                     ) {
                         Icon(Icons.Filled.Add, contentDescription = "Create Playlist")
                     }
@@ -487,6 +495,7 @@ fun HomeScreen(
                             playbackState = playbackState,
                             onTrackClick = { clicked ->
                                 viewModel.playbackManager.playTrackList(tracks, tracks.indexOf(clicked))
+                                onTrackClick()
                             },
                             onFavoriteClick = { viewModel.toggleFavorite(it.id) },
                             onPlaylistAddClick = { showAddToPlaylistDialog = it },
@@ -495,7 +504,8 @@ fun HomeScreen(
                             lang = lang
                         )
                         1 -> RadioTab(
-                            viewModel = viewModel
+                            viewModel = viewModel,
+                            onStationClick = onTrackClick
                         )
                         2 -> PlaylistsTab(
                             playlists = playlists,
@@ -508,6 +518,7 @@ fun HomeScreen(
                             playbackState = playbackState,
                             onTrackClick = { clicked ->
                                 viewModel.playbackManager.playTrackList(favorites, favorites.indexOf(clicked))
+                                onTrackClick()
                             },
                             onFavoriteClick = { viewModel.toggleFavorite(it.id) },
                             onPlaylistAddClick = { showAddToPlaylistDialog = it },
@@ -593,7 +604,7 @@ fun SettingsAndSupportDialog(
         try {
             val subjectStr = if (lang == "ar") "اقتراح بخصوص تطبيق Aura Music" else "Aura Music Suggestions"
             val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-                data = android.net.Uri.parse("mailto:suggestions@auramusic.app")
+                data = android.net.Uri.parse("mailto:info.cik@cikcoin.art")
                 putExtra(android.content.Intent.EXTRA_SUBJECT, subjectStr)
             }
             context.startActivity(intent)
@@ -1052,7 +1063,7 @@ fun SettingsAndSupportDialog(
                                     )
                                 }
                                 Text(
-                                    text = "suggestions@auramusic.app",
+                                    text = "info.cik@cikcoin.art",
                                     style = MaterialTheme.typography.bodySmall,
                                     fontSize = 11.sp,
                                     color = MaterialTheme.colorScheme.primary,
@@ -1939,6 +1950,7 @@ fun shareTrack(context: Context, track: Track) {
 @Composable
 fun RadioTab(
     viewModel: MusicViewModel,
+    onStationClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -1973,6 +1985,7 @@ fun RadioTab(
         }
     } else {
         LazyColumn(
+            contentPadding = PaddingValues(bottom = 96.dp),
             modifier = modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
@@ -1994,7 +2007,10 @@ fun RadioTab(
                 val isCurrentThis = playbackState.currentTrack?.id == station.id
 
                 Card(
-                    onClick = { viewModel.playRadioStation(station) },
+                    onClick = {
+                        viewModel.playRadioStation(station)
+                        onStationClick()
+                    },
                     shape = RoundedCornerShape(20.dp),
                     border = androidx.compose.foundation.BorderStroke(
                         width = 1.dp,

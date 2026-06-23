@@ -33,6 +33,7 @@ fun PlaylistDetailScreen(
     playlist: Playlist,
     viewModel: MusicViewModel,
     onBackClick: () -> Unit,
+    onTrackClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -126,6 +127,7 @@ fun PlaylistDetailScreen(
                             isPlaying = isPlaying,
                             onTrackClick = {
                                 viewModel.playbackManager.playTrackList(tracks, index)
+                                onTrackClick()
                             },
                             onMoveUp = {
                                 viewModel.moveTrack(playlist.id, track.id, moveUp = true)
