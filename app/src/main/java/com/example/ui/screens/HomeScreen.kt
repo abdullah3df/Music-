@@ -90,6 +90,45 @@ fun HomeScreen(
     val themeId by viewModel.selectedThemeColor.collectAsState()
     val activeTheme = remember(themeId) { AppThemeColor.fromId(themeId) }
 
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredTracks = remember(tracks, searchQuery) {
+        if (searchQuery.isBlank()) {
+            tracks
+        } else {
+            val query = searchQuery.trim().lowercase()
+            tracks.filter {
+                it.title.lowercase().contains(query) ||
+                it.artist.lowercase().contains(query) ||
+                it.album.lowercase().contains(query)
+            }
+        }
+    }
+
+    val filteredFavorites = remember(favorites, searchQuery) {
+        if (searchQuery.isBlank()) {
+            favorites
+        } else {
+            val query = searchQuery.trim().lowercase()
+            favorites.filter {
+                it.title.lowercase().contains(query) ||
+                it.artist.lowercase().contains(query) ||
+                it.album.lowercase().contains(query)
+            }
+        }
+    }
+
+    val filteredPlaylists = remember(playlists, searchQuery) {
+        if (searchQuery.isBlank()) {
+            playlists
+        } else {
+            val query = searchQuery.trim().lowercase()
+            playlists.filter {
+                it.name.lowercase().contains(query)
+            }
+        }
+    }
+
     // Show toast message on playback errors
     LaunchedEffect(playbackState.errorMessage) {
         playbackState.errorMessage?.let { error ->
@@ -373,6 +412,7 @@ fun HomeScreen(
                     }
                     if (showAddRadioDialog) {
                         AddRadioStationDialog(
+                            lang = lang,
                             onDismiss = { showAddRadioDialog = false },
                             onAdd = { name, url ->
                                 viewModel.addRadioStation(name, url)
@@ -402,6 +442,50 @@ fun HomeScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
+                // Real-time Search Bar
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .testTag("library_search_bar"),
+                    placeholder = {
+                        Text(
+                            text = if (lang == "ar") "ابحث عن الأغاني، الفنانين، أو الألبومات..." else "Search songs, artists, or albums...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = "Search Icon",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Clear,
+                                    contentDescription = "Clear Search",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(24.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.15f),
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
+                    ),
+                    textStyle = MaterialTheme.typography.bodyMedium
+                )
+
                 // Customized sliding Pill Tabrow container
                 Row(
                     modifier = Modifier
@@ -480,7 +564,7 @@ fun HomeScreen(
                 Box(modifier = Modifier.fillMaxSize()) {
                     when (selectedTab) {
                         0 -> AllSongsTab(
-                            tracks = tracks,
+                            tracks = filteredTracks,
                             hasPermission = hasPermission,
                             onRequestPermission = {
                                 val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -494,7 +578,7 @@ fun HomeScreen(
                             onScanClick = { viewModel.scanLocalFiles(context) },
                             playbackState = playbackState,
                             onTrackClick = { clicked ->
-                                viewModel.playbackManager.playTrackList(tracks, tracks.indexOf(clicked))
+                                viewModel.playbackManager.playTrackList(filteredTracks, filteredTracks.indexOf(clicked))
                                 onTrackClick()
                             },
                             onFavoriteClick = { viewModel.toggleFavorite(it.id) },
@@ -505,19 +589,21 @@ fun HomeScreen(
                         )
                         1 -> RadioTab(
                             viewModel = viewModel,
-                            onStationClick = onTrackClick
+                            onStationClick = onTrackClick,
+                            searchQuery = searchQuery,
+                            lang = lang
                         )
                         2 -> PlaylistsTab(
-                            playlists = playlists,
+                            playlists = filteredPlaylists,
                             onPlaylistClick = onPlaylistClick,
                             onDeleteClick = { viewModel.deletePlaylist(it.id) },
                             lang = lang
                         )
                         3 -> FavoritesTab(
-                            favorites = favorites,
+                            favorites = filteredFavorites,
                             playbackState = playbackState,
                             onTrackClick = { clicked ->
-                                viewModel.playbackManager.playTrackList(favorites, favorites.indexOf(clicked))
+                                viewModel.playbackManager.playTrackList(filteredFavorites, filteredFavorites.indexOf(clicked))
                                 onTrackClick()
                             },
                             onFavoriteClick = { viewModel.toggleFavorite(it.id) },
@@ -1951,10 +2037,20 @@ fun shareTrack(context: Context, track: Track) {
 fun RadioTab(
     viewModel: MusicViewModel,
     onStationClick: () -> Unit = {},
+    searchQuery: String = "",
+    lang: String = "ar",
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val radioStations by viewModel.allRadioStations.collectAsState()
+    val radioStationsRaw by viewModel.allRadioStations.collectAsState()
+    val radioStations = remember(radioStationsRaw, searchQuery) {
+        if (searchQuery.isBlank()) {
+            radioStationsRaw
+        } else {
+            val query = searchQuery.trim().lowercase()
+            radioStationsRaw.filter { it.name.lowercase().contains(query) }
+        }
+    }
     val playbackState by viewModel.playbackState.collectAsState()
 
     if (radioStations.isEmpty()) {
@@ -1971,12 +2067,12 @@ fun RadioTab(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "لم يتم العثور على محطات راديو",
+                    Localization.get("radio_no_stations", lang),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                 )
                 Text(
-                    "انقر على الزر بالأسفل لإضافة محطة مخصصة",
+                    Localization.get("radio_desc_empty", lang),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                     modifier = Modifier.padding(top = 4.dp)
@@ -1994,7 +2090,7 @@ fun RadioTab(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "راديو الإنترنت المباشر 📻",
+                    text = Localization.get("live_internet_radio", lang),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -2083,7 +2179,7 @@ fun RadioTab(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = if (isPlayingThis) "البث مباشر مفعّل" else "جاهز للبث",
+                                    text = if (isPlayingThis) Localization.get("live_stream_active", lang) else Localization.get("ready_to_stream", lang),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
                                 )
@@ -2127,6 +2223,7 @@ fun RadioTab(
 
 @Composable
 fun AddRadioStationDialog(
+    lang: String = "ar",
     onDismiss: () -> Unit,
     onAdd: (String, String) -> Unit
 ) {
@@ -2143,7 +2240,7 @@ fun AddRadioStationDialog(
 
     AlertDialog(
         onDismissRequest = dismissWithKeyboardClose,
-        title = { Text("إضافة إذاعة راديو جديدة") },
+        title = { Text(Localization.get("add_radio_title", lang)) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -2155,8 +2252,8 @@ fun AddRadioStationDialog(
                         name = it
                         errorMsg = null
                     },
-                    label = { Text("اسم إذاعة الراديو") },
-                    placeholder = { Text("مثال: إذاعة القرآن الكريم") },
+                    label = { Text(Localization.get("radio_name_label", lang)) },
+                    placeholder = { Text(Localization.get("radio_name_placeholder", lang)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -2167,8 +2264,8 @@ fun AddRadioStationDialog(
                         url = it
                         errorMsg = null
                     },
-                    label = { Text("رابط البث المباشر (URL)") },
-                    placeholder = { Text("https://example.com/stream.mp3") },
+                    label = { Text(Localization.get("radio_url_label", lang)) },
+                    placeholder = { Text(Localization.get("radio_url_placeholder", lang)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -2186,9 +2283,9 @@ fun AddRadioStationDialog(
             Button(
                 onClick = {
                     if (name.isBlank() || url.isBlank()) {
-                        errorMsg = "يرجى ملء كافة الحقول المطلوبة!"
+                        errorMsg = Localization.get("fields_required_error", lang)
                     } else if (!url.startsWith("http://") && !url.startsWith("https://") && !url.contains(".")) {
-                        errorMsg = "يرجى إدخال رابط بث صحيح!"
+                        errorMsg = Localization.get("invalid_url_error", lang)
                     } else {
                         keyboardController?.hide()
                         focusManager.clearFocus()
@@ -2196,12 +2293,12 @@ fun AddRadioStationDialog(
                     }
                 }
             ) {
-                Text("إضافة")
+                Text(Localization.get("btn_add", lang))
             }
         },
         dismissButton = {
             TextButton(onClick = dismissWithKeyboardClose) {
-                Text("إلغاء")
+                Text(Localization.get("btn_cancel", lang))
             }
         }
     )

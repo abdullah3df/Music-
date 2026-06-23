@@ -249,6 +249,90 @@ object Localization {
             "es" to "Agregar Radio",
             "de" to "Radio hinzufügen"
         ),
+        "live_internet_radio" to mapOf(
+            "ar" to "راديو الإنترنت المباشر 📻",
+            "en" to "Live Internet Radio 📻",
+            "fr" to "Radio Internet en Direct 📻",
+            "es" to "Radio por Internet en Vivo 📻",
+            "de" to "Live-Internetradio 📻"
+        ),
+        "live_stream_active" to mapOf(
+            "ar" to "البث مباشر مفعّل",
+            "en" to "Live stream is active",
+            "fr" to "Flux en direct actif",
+            "es" to "Transmisión en vivo activa",
+            "de" to "Live-Stream ist aktiv"
+        ),
+        "ready_to_stream" to mapOf(
+            "ar" to "جاهز للبث",
+            "en" to "Ready to stream",
+            "fr" to "Prêt pour la diffusion",
+            "es" to "Listo para transmitir",
+            "de" to "Bereit zum Streamen"
+        ),
+        "add_radio_title" to mapOf(
+            "ar" to "إضافة إذاعة راديو جديدة",
+            "en" to "Add New Radio Station",
+            "fr" to "Ajouter une nouvelle station de radio",
+            "es" to "Agregar una nueva estación de radio",
+            "de" to "Neuen Radiosender hinzufügen"
+        ),
+        "radio_name_label" to mapOf(
+            "ar" to "اسم إذاعة الراديو",
+            "en" to "Radio Station Name",
+            "fr" to "Nom de la station de radio",
+            "es" to "Nombre de la estación de radio",
+            "de" to "Radiosender Name"
+        ),
+        "radio_name_placeholder" to mapOf(
+            "ar" to "مثال: إذاعة القرآن الكريم",
+            "en" to "e.g., Live Radio Station",
+            "fr" to "ex. Station de Radio en Direct",
+            "es" to "ej. Estación de Radio en Vivo",
+            "de" to "z.B. Live-Radiosender"
+        ),
+        "radio_url_label" to mapOf(
+            "ar" to "رابط البث المباشر (URL)",
+            "en" to "Live Stream URL",
+            "fr" to "URL du flux en direct",
+            "es" to "URL de transmisión en vivo",
+            "de" to "Live-Stream-URL"
+        ),
+        "radio_url_placeholder" to mapOf(
+            "ar" to "https://example.com/stream.mp3",
+            "en" to "https://example.com/stream.mp3",
+            "fr" to "https://example.com/stream.mp3",
+            "es" to "https://example.com/stream.mp3",
+            "de" to "https://example.com/stream.mp3"
+        ),
+        "fields_required_error" to mapOf(
+            "ar" to "يرجى ملء كافة الحقول المطلوبة!",
+            "en" to "Please fill in all required fields!",
+            "fr" to "Veuillez remplir tous les champs requis!",
+            "es" to "¡Por favor complete todos los campos requeridos!",
+            "de" to "Bitte füllen Sie alle erforderlichen Felder aus!"
+        ),
+        "invalid_url_error" to mapOf(
+            "ar" to "يرجى إدخال رابط بث صحيح!",
+            "en" to "Please enter a valid stream URL!",
+            "fr" to "Veuillez entrer une URL de flux valide!",
+            "es" to "¡Por favor ingrese una URL de transmisión válida!",
+            "de" to "Bitte geben Sie eine gültige Stream-URL ein!"
+        ),
+        "btn_add" to mapOf(
+            "ar" to "إضافة",
+            "en" to "Add",
+            "fr" to "Ajouter",
+            "es" to "Agregar",
+            "de" to "Hinzufügen"
+        ),
+        "btn_cancel" to mapOf(
+            "ar" to "إلغاء",
+            "en" to "Cancel",
+            "fr" to "Annuler",
+            "es" to "Cancelar",
+            "de" to "Abbrechen"
+        ),
         "favorites_empty" to mapOf(
             "ar" to "المفضلة فارغة",
             "en" to "Favorites is empty",
