@@ -35,7 +35,13 @@ class MusicViewModel(
     // Preferences values for Language and Theme Color
     private val prefs = context.getSharedPreferences("aura_settings", Context.MODE_PRIVATE)
 
-    private val _selectedLanguage = MutableStateFlow(prefs.getString("lang", "ar") ?: "ar")
+    private fun getDefaultLanguage(): String {
+        val systemLang = java.util.Locale.getDefault().language
+        val supportedCodes = setOf("en", "ar", "fr", "es", "de")
+        return if (systemLang in supportedCodes) systemLang else "en"
+    }
+
+    private val _selectedLanguage = MutableStateFlow(prefs.getString("lang", null) ?: getDefaultLanguage())
     val selectedLanguage: StateFlow<String> = _selectedLanguage.asStateFlow()
 
     private val _selectedThemeColor = MutableStateFlow(prefs.getString("theme", "purple") ?: "purple")

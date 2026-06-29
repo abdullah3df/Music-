@@ -1264,7 +1264,7 @@ fun AllSongsTab(
     onPlaylistAddClick: (Track) -> Unit,
     onShareClick: (Track) -> Unit,
     onDeleteClick: (Track) -> Unit,
-    lang: String = "ar"
+    lang: String = "en"
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
         if (!hasPermission) {
@@ -1451,7 +1451,7 @@ fun PlaylistsTab(
     playlists: List<Playlist>,
     onPlaylistClick: (Playlist) -> Unit,
     onDeleteClick: (Playlist) -> Unit,
-    lang: String = "ar"
+    lang: String = "en"
 ) {
     if (playlists.isEmpty()) {
         Box(
@@ -1512,7 +1512,7 @@ fun FavoritesTab(
     onPlaylistAddClick: (Track) -> Unit,
     onShareClick: (Track) -> Unit,
     onDeleteClick: (Track) -> Unit,
-    lang: String = "ar"
+    lang: String = "en"
 ) {
     if (favorites.isEmpty()) {
         Box(
@@ -2038,7 +2038,7 @@ fun RadioTab(
     viewModel: MusicViewModel,
     onStationClick: () -> Unit = {},
     searchQuery: String = "",
-    lang: String = "ar",
+    lang: String = "en",
     modifier: Modifier = Modifier
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -2223,7 +2223,7 @@ fun RadioTab(
 
 @Composable
 fun AddRadioStationDialog(
-    lang: String = "ar",
+    lang: String = "en",
     onDismiss: () -> Unit,
     onAdd: (String, String) -> Unit
 ) {
