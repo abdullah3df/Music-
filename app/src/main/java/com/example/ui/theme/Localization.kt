@@ -305,6 +305,20 @@ object Localization {
             "es" to "https://example.com/stream.mp3",
             "de" to "https://example.com/stream.mp3"
         ),
+        "radio_logo_label" to mapOf(
+            "ar" to "رابط شعار/رمز الراديو (اختياري)",
+            "en" to "Radio Logo/Icon URL (Optional)",
+            "fr" to "URL du logo/icône de la radio (Optionnel)",
+            "es" to "URL del logotipo/icono de la radio (Opcional)",
+            "de" to "Radio-Logo/Icon-URL (Optional)"
+        ),
+        "radio_logo_placeholder" to mapOf(
+            "ar" to "رابط صورة الشعار (https://...)",
+            "en" to "Logo image URL (https://...)",
+            "fr" to "URL de l'image du logo (https://...)",
+            "es" to "URL de la imagen del logo (https://...)",
+            "de" to "Logo-Bild-URL (https://...)"
+        ),
         "fields_required_error" to mapOf(
             "ar" to "يرجى ملء كافة الحقول المطلوبة!",
             "en" to "Please fill in all required fields!",

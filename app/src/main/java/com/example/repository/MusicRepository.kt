@@ -72,30 +72,35 @@ class MusicRepository(
                 id = "radio_quran_cairo",
                 name = "إذاعة القرآن الكريم - القاهرة",
                 streamUrl = "https://n01.radiojar.com/8s5u8v7g7v8uv",
+                logoUrl = "https://images.unsplash.com/photo-1609599006353-e629aaabfeae?w=300&h=300&fit=crop",
                 isCustom = false
             ),
             RadioStation(
                 id = "radio_quran_recitations",
                 name = "إذاعة التلاوات الخاشعة (مباشر)",
                 streamUrl = "https://backup.qurango.net/radio/mix",
+                logoUrl = "https://images.unsplash.com/photo-1542810634-71277d95dcbb?w=300&h=300&fit=crop",
                 isCustom = false
             ),
             RadioStation(
                 id = "radio_mcd",
                 name = "إذاعة مونت كارلو الدولية",
                 streamUrl = "https://mc-doualiya.ice.infomaniak.ch/mc-doualiya-96k.mp3",
+                logoUrl = "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?w=300&h=300&fit=crop",
                 isCustom = false
             ),
             RadioStation(
                 id = "radio_abdulbasit",
                 name = "قناة الشيخ عبد الباسط 📖",
                 streamUrl = "https://backup.qurango.net/radio/abdulbasit_abdulsamad",
+                logoUrl = "https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?w=300&h=300&fit=crop",
                 isCustom = false
             ),
             RadioStation(
                 id = "radio_minshawi",
                 name = "تلاوات الشيخ المنشاوي 📖",
                 streamUrl = "https://backup.qurango.net/radio/mohammad_alminshawi",
+                logoUrl = "https://images.unsplash.com/photo-1564507592333-c60657eea523?w=300&h=300&fit=crop",
                 isCustom = false
             )
         )
@@ -107,7 +112,7 @@ class MusicRepository(
                 val found = existing.find { it.id == default.id }
                 if (found == null) {
                     radioStationDao.insertRadioStation(default)
-                } else if (!found.isCustom && (found.streamUrl != default.streamUrl || found.name != default.name)) {
+                } else if (!found.isCustom && (found.streamUrl != default.streamUrl || found.name != default.name || found.logoUrl != default.logoUrl)) {
                     radioStationDao.insertRadioStation(default)
                 }
             }

@@ -11,7 +11,7 @@ import com.example.data.model.RadioStation
 
 @Database(
     entities = [Track::class, Playlist::class, PlaylistTrack::class, RadioStation::class],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

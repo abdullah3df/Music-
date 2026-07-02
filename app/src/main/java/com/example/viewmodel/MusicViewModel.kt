@@ -222,7 +222,7 @@ class MusicViewModel(
     }
 
     // Radio operations
-    fun addRadioStation(name: String, streamUrl: String) {
+    fun addRadioStation(name: String, streamUrl: String, logoUrl: String? = null) {
         viewModelScope.launch {
             val safeUrl = if (!streamUrl.startsWith("http://") && !streamUrl.startsWith("https://")) {
                 "https://$streamUrl"
@@ -230,8 +230,9 @@ class MusicViewModel(
                 streamUrl
             }
             val id = "radio_custom_${System.currentTimeMillis()}"
+            val finalLogoUrl = logoUrl?.takeIf { it.isNotBlank() }
             repository.insertRadioStation(
-                RadioStation(id = id, name = name, streamUrl = safeUrl, isCustom = true)
+                RadioStation(id = id, name = name, streamUrl = safeUrl, logoUrl = finalLogoUrl, isCustom = true)
             )
         }
     }
@@ -254,7 +255,7 @@ class MusicViewModel(
                 artist = "راديو مباشر • Live Radio",
                 album = "راديو الإنترنت",
                 mediaUri = station.streamUrl,
-                albumArtUri = null,
+                albumArtUri = station.logoUrl,
                 durationMs = 0, // 0 signifies infinite/live stream duration
                 dateAdded = station.dateAdded
             )

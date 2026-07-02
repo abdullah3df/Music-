@@ -414,8 +414,8 @@ fun HomeScreen(
                         AddRadioStationDialog(
                             lang = lang,
                             onDismiss = { showAddRadioDialog = false },
-                            onAdd = { name, url ->
-                                viewModel.addRadioStation(name, url)
+                            onAdd = { name, url, logo ->
+                                viewModel.addRadioStation(name, url, logo)
                                 showAddRadioDialog = false
                             }
                         )
@@ -2130,33 +2130,68 @@ fun RadioTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // High-fidelity audio playing equalizer or static radio logo box
-                        if (isPlayingThis) {
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                LiveEqualizerVisualizer(
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(4.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    if (isCurrentThis) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (!station.logoUrl.isNullOrBlank()) {
+                                AsyncImage(
+                                    model = station.logoUrl,
+                                    contentDescription = station.name,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
                                 )
+                            } else {
+                                // Dynamic premium fallback gradient avatar
+                                val nameHash = station.name.hashCode()
+                                val colors = remember(nameHash) {
+                                    val h = Math.abs(nameHash)
+                                    val c1 = Color(
+                                        red = (h % 150) + 50,
+                                        green = ((h / 3) % 150) + 50,
+                                        blue = ((h / 7) % 150) + 50
+                                    )
+                                    val c2 = Color(
+                                        red = ((h / 2) % 150) + 80,
+                                        green = ((h / 5) % 150) + 80,
+                                        blue = ((h / 11) % 150) + 80
+                                    )
+                                    listOf(c1, c2)
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Brush.linearGradient(colors)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val firstChar = station.name.trim().firstOrNull()?.toString() ?: "R"
+                                    Text(
+                                        text = firstChar.uppercase(),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
                             }
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(46.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Radio,
-                                    tint = if (isCurrentThis) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                    modifier = Modifier.size(24.dp),
-                                    contentDescription = null
-                                )
+
+                            if (isPlayingThis) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Black.copy(alpha = 0.5f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    LiveEqualizerVisualizer(
+                                        color = Color.White,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
 
@@ -2225,10 +2260,11 @@ fun RadioTab(
 fun AddRadioStationDialog(
     lang: String = "en",
     onDismiss: () -> Unit,
-    onAdd: (String, String) -> Unit
+    onAdd: (String, String, String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
+    var logo by remember { mutableStateOf("") }
     var errorMsg by remember { mutableStateOf<String?>(null) }
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusManager = LocalFocusManager.current
@@ -2270,6 +2306,18 @@ fun AddRadioStationDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                OutlinedTextField(
+                    value = logo,
+                    onValueChange = {
+                        logo = it
+                        errorMsg = null
+                    },
+                    label = { Text(Localization.get("radio_logo_label", lang)) },
+                    placeholder = { Text(Localization.get("radio_logo_placeholder", lang)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 errorMsg?.let { msg ->
                     Text(
                         text = msg,
@@ -2289,7 +2337,7 @@ fun AddRadioStationDialog(
                     } else {
                         keyboardController?.hide()
                         focusManager.clearFocus()
-                        onAdd(name.trim(), url.trim())
+                        onAdd(name.trim(), url.trim(), logo.trim())
                     }
                 }
             ) {

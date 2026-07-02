@@ -41,6 +41,7 @@ data class RadioStation(
     @PrimaryKey val id: String,
     val name: String,
     val streamUrl: String,
+    val logoUrl: String? = null,
     val isCustom: Boolean = false,
     val dateAdded: Long = System.currentTimeMillis()
 )
